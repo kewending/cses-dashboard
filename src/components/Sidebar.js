@@ -1,22 +1,24 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 export default function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('sidebarCollapsed') === 'true';
-    }
-    return false;
-  });
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    if (saved === 'true') {
+      setIsCollapsed(true);
+    }
+  }, []);
 
   const toggleSidebar = () => {
     setIsCollapsed(prev => {
       const next = !prev;
-      if (typeof window !== 'undefined') localStorage.setItem('sidebarCollapsed', next);
+      localStorage.setItem('sidebarCollapsed', next);
       return next;
     });
   };

@@ -436,7 +436,7 @@ export default function Dashboard() {
         <div className="text-[var(--color-text-muted)] text-sm">Friday, September 11, 2026</div>
       </div>
       
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+      <DndContext id="dashboard-dnd" sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
         <div className="flex flex-col gap-6 w-full items-start">
           {rootBlocks.map(block => renderBlock(block))}
         </div>
