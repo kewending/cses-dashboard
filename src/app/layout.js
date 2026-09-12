@@ -1,4 +1,5 @@
 import Sidebar from "../components/Sidebar";
+import { cookies } from 'next/headers';
 import "./globals.css";
 
 export const metadata = {
@@ -6,12 +7,15 @@ export const metadata = {
   description: "Comprehensive Life Operating System",
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const cookieStore = await cookies();
+  const defaultCollapsed = cookieStore.get('sidebarCollapsed')?.value === 'true';
+
   return (
     <html lang="en">
       <body className="flex h-screen overflow-hidden">
         {/* Responsive, Stateful Global Sidebar */}
-        <Sidebar />
+        <Sidebar defaultCollapsed={defaultCollapsed} />
 
         {/* Main Content Area */}
         <main className="flex-1 h-full overflow-y-auto relative bg-[var(--color-bg-dark)]">

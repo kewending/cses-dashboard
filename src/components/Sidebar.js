@@ -4,21 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export default function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+export default function Sidebar({ defaultCollapsed = false }) {
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
   const pathname = usePathname();
-
-  useEffect(() => {
-    const saved = localStorage.getItem('sidebarCollapsed');
-    if (saved === 'true') {
-      setIsCollapsed(true);
-    }
-  }, []);
 
   const toggleSidebar = () => {
     setIsCollapsed(prev => {
       const next = !prev;
-      localStorage.setItem('sidebarCollapsed', next);
+      document.cookie = `sidebarCollapsed=${next}; path=/; max-age=31536000`; // 1 year
       return next;
     });
   };
