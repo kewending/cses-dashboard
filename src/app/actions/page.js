@@ -20,6 +20,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+import { getTasks, getSessions, getObjectives, createTask, updateTask, toggleTaskComplete, createSession, updateSession, deleteSession, createSubtask, deleteTask } from './serverActions';
 
 // --- MOCK DATA ---
 const INITIAL_TASKS = [
@@ -219,6 +220,51 @@ function FilterDropdown({ taskFilter, setTaskFilter, allTags }) {
   );
 }
 
+function MoreActionsDropdown({ onDelete }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative z-[110]" ref={containerRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-8 h-8 rounded-md flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
+      >
+        <span className="text-xl leading-none mb-2">...</span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full mt-1 right-0 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 flex flex-col font-normal text-sm animate-in fade-in zoom-in-95 duration-100">
+          <div className="px-3 pb-2 text-[11px] text-gray-400 font-medium tracking-wide">Other actions:</div>
+          <button onClick={() => setIsOpen(false)} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-600 flex items-center gap-3">
+            <span className="text-gray-400">🔁</span> Repeat
+          </button>
+          <button onClick={() => setIsOpen(false)} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-600 flex items-center justify-between">
+            <span className="flex items-center gap-3"><span className="text-gray-400">🎯</span> Align with objective</span>
+            <span className="text-xs text-gray-400 font-mono">R</span>
+          </button>
+          <button onClick={() => setIsOpen(false)} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-600 flex items-center justify-between">
+            <span className="flex items-center gap-3"><span className="text-gray-400">📋</span> Duplicate</span>
+            <span className="text-xs text-gray-400 font-mono">Ctrl D</span>
+          </button>
+          <button onClick={() => { onDelete(); setIsOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 flex items-center justify-between group">
+            <span className="flex items-center gap-3"><span className="text-gray-400 group-hover:text-red-500">🗑️</span> Delete</span>
+            <span className="text-[10px] text-gray-400 group-hover:text-red-400 font-mono">Ctrl Backspace</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const getProjectionDays = (baseDateStr) => {
   const days = [];
   const baseDate = baseDateStr ? new Date(baseDateStr) : new Date();
@@ -273,7 +319,7 @@ const formatSessionTime = (mins) => {
 
 // --- COMPONENTS ---
 
-function SortableTask({ task, session, isActiveTimer, activeTimer, onToggleTimer, onOpenDetail, onToggleComplete, onToggleSubtaskComplete }) {
+function SortableTask({ task, session, isActiveTimer, activeTimer, onToggleTimer, onOpenDetail, onToggleComplete, onToggleSubtaskComplete, onDeleteTask }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { type: 'Task', task }
@@ -313,6 +359,13 @@ function SortableTask({ task, session, isActiveTimer, activeTimer, onToggleTimer
             {task.title}
           </div>
         </div>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}
+          className="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 mt-1"
+          title="Delete Task"
+        >
+          🗑️
+        </button>
       </div>
 
       {/* SUBTASKS BLOCK */}
@@ -463,15 +516,15 @@ function CalendarGrid({ sessions, tasks, onOpenDetail, baseDate, zoomLevel, setZ
           <button onClick={() => setZoomLevel(Math.min(160, zoomLevel + 20))} className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center font-mono">+</button>
         </div>
       </div>
-      <div 
-        ref={(node) => { setNodeRef(node); scrollRef.current = node; }} 
+      <div
+        ref={(node) => { setNodeRef(node); scrollRef.current = node; }}
         onScroll={(e) => {
           if (calendarScrollRef) calendarScrollRef.current = e.target.scrollTop;
         }}
         className="flex-1 relative bg-transparent overflow-y-auto custom-scrollbar"
       >
-        <div 
-          className="relative pt-4" 
+        <div
+          className="relative pt-4"
           style={{ minHeight: `${24 * zoomLevel + 40}px` }}
           onDoubleClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
@@ -590,16 +643,17 @@ function TaskCreatorModal({ config, onClose, onAdd }) {
   );
 }
 
-function ShutdownView({ 
-  dateStr, 
-  tasks, 
+function ShutdownView({
+  dateStr,
+  tasks,
   sessions,
   onAddTaskClick,
   activeTimer,
   onToggleTimer,
   onOpenDetail,
   onToggleComplete,
-  onToggleSubtaskComplete 
+  onToggleSubtaskComplete,
+  onDeleteTask
 }) {
   const shutdownTasks = tasks.filter(t => t.startDate === dateStr);
 
@@ -681,10 +735,10 @@ function ShutdownView({
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-8">
           <div>
             <h3 className="text-lg font-semibold text-white mb-6">Total time</h3>
-            
+
             <div className="relative mt-8 mb-12">
               {/* Tooltip Actual */}
-              <div 
+              <div
                 className="absolute -top-8 -translate-x-1/2 bg-green-500 text-white text-xs font-bold py-1 px-2 rounded whitespace-nowrap"
                 style={{ left: `${Math.min(100, actualPercent)}%` }}
               >
@@ -702,16 +756,16 @@ function ShutdownView({
                 <div className="absolute top-0 bottom-0 w-0.5 bg-white/20" style={{ left: `${eightHrPercent}%` }}>
                   <span className="absolute top-3 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 whitespace-nowrap">8 hr</span>
                 </div>
-                
+
                 {/* Actual Bar */}
-                <div 
-                  className="absolute top-0 left-0 bottom-0 bg-green-500 rounded-full" 
+                <div
+                  className="absolute top-0 left-0 bottom-0 bg-green-500 rounded-full"
                   style={{ width: `${Math.min(100, actualPercent)}%` }}
                 ></div>
               </div>
 
               {/* Tooltip Planned */}
-              <div 
+              <div
                 className="absolute top-6 -translate-x-1/2 bg-gray-500 text-white text-[10px] font-bold py-1 px-2 rounded flex flex-col items-center whitespace-nowrap"
                 style={{ left: `${Math.min(100, plannedPercent)}%` }}
               >
@@ -742,7 +796,7 @@ function ShutdownView({
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <RechartsTooltip 
+                    <RechartsTooltip
                       formatter={(value) => formatHrsMins(value)}
                       contentStyle={{ backgroundColor: '#222', border: 'none', borderRadius: '8px', color: '#fff' }}
                     />
@@ -754,7 +808,7 @@ function ShutdownView({
                 </div>
               )}
             </div>
-            
+
             <div className="flex flex-wrap gap-3 mt-4 justify-center">
               {pieData.map((entry, index) => (
                 <div key={entry.name} className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -780,6 +834,7 @@ function ShutdownView({
           onOpenDetail={onOpenDetail}
           onToggleComplete={onToggleComplete}
           onToggleSubtaskComplete={onToggleSubtaskComplete}
+          onDeleteTask={onDeleteTask}
           showAdd={false}
         />
       </div>
@@ -797,6 +852,7 @@ function ShutdownView({
           onOpenDetail={onOpenDetail}
           onToggleComplete={onToggleComplete}
           onToggleSubtaskComplete={onToggleSubtaskComplete}
+          onDeleteTask={onDeleteTask}
           showAdd={false}
         />
       </div>
@@ -806,7 +862,7 @@ function ShutdownView({
 
 
 // --- COLUMN COMPONENT ---
-function KanbanColumn({ id, title, dateStr, tasks, sessions, onAddTaskClick, activeTimer, onToggleTimer, onOpenDetail, onToggleComplete, onToggleSubtaskComplete, showAdd = true, onShutdownClick }) {
+function KanbanColumn({ id, title, dateStr, tasks, sessions, onAddTaskClick, activeTimer, onToggleTimer, onOpenDetail, onToggleComplete, onToggleSubtaskComplete, onDeleteTask, showAdd = true, onShutdownClick }) {
   const { setNodeRef } = useDroppable({ id });
 
   const totalPlanned = tasks.reduce((acc, t) => acc + t.plannedDurationMinutes, 0);
@@ -853,6 +909,7 @@ function KanbanColumn({ id, title, dateStr, tasks, sessions, onAddTaskClick, act
               onOpenDetail={onOpenDetail}
               onToggleComplete={onToggleComplete}
               onToggleSubtaskComplete={onToggleSubtaskComplete}
+              onDeleteTask={onDeleteTask}
             />
           ))}
         </SortableContext>
@@ -864,9 +921,19 @@ function KanbanColumn({ id, title, dateStr, tasks, sessions, onAddTaskClick, act
 
 // --- MAIN APP ---
 export default function ActionEngine() {
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
-  const [sessions, setSessions] = useState(INITIAL_SESSIONS);
-  const [objectives, setObjectives] = useState(INITIAL_OBJECTIVES);
+  const [tasks, setTasks] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [objectives, setObjectives] = useState([]);
+
+  useEffect(() => {
+    async function loadData() {
+      const [t, s, o] = await Promise.all([getTasks(), getSessions(), getObjectives()]);
+      setTasks(t);
+      setSessions(s);
+      setObjectives(o);
+    }
+    loadData();
+  }, []);
 
   const getTodayStr = () => {
     const d = new Date();
@@ -906,8 +973,8 @@ export default function ActionEngine() {
     if (!dateStr || !baseDate) return false;
     const d = new Date(dateStr);
     const b = new Date(baseDate);
-    d.setHours(0,0,0,0);
-    b.setHours(0,0,0,0);
+    d.setHours(0, 0, 0, 0);
+    b.setHours(0, 0, 0, 0);
     const diffDays = Math.round((d - b) / (1000 * 60 * 60 * 24));
     return diffDays > 0 && diffDays <= 7;
   };
@@ -940,28 +1007,52 @@ export default function ActionEngine() {
     return () => clearInterval(interval);
   }, [activeTimer]);
 
-  const toggleTimer = (id, type) => {
-    if (activeTimer?.id === id) setActiveTimer(null);
+  const toggleTimer = async (id, type) => {
+    if (activeTimer?.id === id) {
+      const task = tasks.find(t => t.id === id || t.subtasks?.some(s => s.id === id));
+      if (task) {
+        if (type === 'task') {
+          await updateTask(id, { actualDurationSeconds: task.actualDurationSeconds });
+        } else {
+          const sub = task.subtasks.find(s => s.id === id);
+          if (sub) await updateTask(id, { actualDurationSeconds: sub.actualDurationSeconds });
+        }
+      }
+      setActiveTimer(null);
+    }
     else setActiveTimer({ id, type });
   };
 
-  const handleAddTask = (task) => {
-    setTasks(prev => [...prev, task]);
-    if (taskCreatorConfig?.startMinutes !== undefined) {
-      setSessions(prev => [...prev, {
-        id: `s-${Date.now()}`,
-        taskId: task.id,
-        startMinutes: taskCreatorConfig.startMinutes
-      }]);
+  const handleDeleteTask = async (taskId) => {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    await deleteTask(taskId);
+    if (detailTaskId === taskId) {
+      setDetailTaskId(null);
     }
   };
 
-  const handleToggleComplete = (taskId) => {
+  const handleAddTask = async (task) => {
+    const newTask = await createTask(task);
+    setTasks(prev => [...prev, newTask]);
+    if (taskCreatorConfig?.startMinutes !== undefined) {
+      const newSession = await createSession({
+        taskId: newTask.id,
+        startMinutes: taskCreatorConfig.startMinutes,
+        date: taskCreatorConfig.dateStr || baseDate,
+      });
+      setSessions(prev => [...prev, newSession]);
+    }
+  };
+
+  const handleToggleComplete = async (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const newIsCompleted = !task.isCompleted;
+    await toggleTaskComplete(taskId, newIsCompleted);
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
-        const newIsCompleted = !t.isCompleted;
-        return { 
-          ...t, 
+        return {
+          ...t,
           isCompleted: newIsCompleted,
           subtasks: t.subtasks ? t.subtasks.map(s => ({ ...s, isCompleted: newIsCompleted })) : []
         };
@@ -970,11 +1061,21 @@ export default function ActionEngine() {
     }));
   };
 
-  const handleToggleSubtaskComplete = (taskId, subtaskId) => {
+  const handleToggleSubtaskComplete = async (taskId, subtaskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const subtask = task.subtasks?.find(s => s.id === subtaskId);
+    if (!subtask) return;
+
+    await toggleTaskComplete(subtaskId, !subtask.isCompleted);
+
     setTasks(prev => prev.map(t => {
       if (t.id !== taskId) return t;
       const newSubtasks = t.subtasks.map(s => s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s);
       const allSubtasksCompleted = newSubtasks.length > 0 && newSubtasks.every(s => s.isCompleted);
+      if (allSubtasksCompleted !== t.isCompleted) {
+        toggleTaskComplete(taskId, allSubtasksCompleted); // fire-and-forget
+      }
       return {
         ...t,
         isCompleted: allSubtasksCompleted,
@@ -983,16 +1084,25 @@ export default function ActionEngine() {
     }));
   };
 
-  const handleAddSubtask = (taskId) => {
+  const handleAddSubtask = async (taskId) => {
+    const mainTask = tasks.find(t => t.id === taskId);
+    if (!mainTask) return;
+
+    const newSubData = {
+      title: '',
+      showInKanban: false,
+      isCompleted: false,
+      plannedDurationMinutes: 15,
+      actualDurationSeconds: 0,
+      status: mainTask.status,
+      tag: mainTask.tag || '',
+      priority: mainTask.priority || 'None',
+      startDate: mainTask.startDate || null,
+      dueDate: mainTask.dueDate || null,
+    };
+    const newSub = await createSubtask(taskId, newSubData);
     setTasks(prev => prev.map(t => {
       if (t.id !== taskId) return t;
-      const newSub = {
-        id: `st-${Date.now()}`,
-        title: 'New subtask',
-        isCompleted: false,
-        plannedDurationMinutes: 15,
-        actualDurationSeconds: 0
-      };
       return { ...t, subtasks: [...(t.subtasks || []), newSub] };
     }));
   };
@@ -1023,7 +1133,7 @@ export default function ActionEngine() {
           const dur = t ? t.plannedDurationMinutes : 60;
           return { start: s.startMinutes, end: s.startMinutes + dur };
         })
-        .sort((a,b) => a.start - b.start);
+        .sort((a, b) => a.start - b.start);
 
       while (hasOverlap) {
         hasOverlap = false;
@@ -1046,13 +1156,14 @@ export default function ActionEngine() {
             const calendarTop = over.rect.top;
             const dropTop = active.rect.current.translated.top;
             const scrollTop = calendarScrollRef.current;
-            
-            const offsetPx = dropTop - calendarTop - 16 + scrollTop; 
+
+            const offsetPx = dropTop - calendarTop - 16 + scrollTop;
             let exactMins = (offsetPx * (60 / calendarZoom));
             exactMins = Math.round(exactMins / 10) * 10;
             const task = tasks.find(t => t.id === s.taskId);
             const duration = task ? task.plannedDurationMinutes : 60;
             exactMins = resolveOverlap(exactMins, duration, active.id);
+            updateSession(s.id, { startMinutes: exactMins, date: baseDate }); // fire-and-forget DB sync
             return { ...s, startMinutes: exactMins };
           }
           return s;
@@ -1075,17 +1186,20 @@ export default function ActionEngine() {
         const calendarTop = over.rect.top;
         const dropTop = active.rect.current.translated.top;
         const scrollTop = calendarScrollRef.current;
-        
-        const offsetPx = dropTop - calendarTop - 16 + scrollTop; 
+
+        const offsetPx = dropTop - calendarTop - 16 + scrollTop;
         let exactMins = (offsetPx * (60 / calendarZoom));
         exactMins = Math.round(exactMins / 10) * 10;
         const duration = activeTask ? activeTask.plannedDurationMinutes : 60;
         exactMins = resolveOverlap(exactMins, duration, active.id);
 
+        const newSessionId = `s-${Date.now()}`;
         setSessions(prev => {
           const filtered = prev.filter(s => s.taskId !== active.id);
-          return [...filtered, { id: `s-${Date.now()}`, taskId: active.id, startMinutes: exactMins }];
+          return [...filtered, { id: newSessionId, taskId: active.id, startMinutes: exactMins }];
         });
+        updateTask(active.id, { startDate: baseDate }); // fire-and-forget
+        createSession({ taskId: active.id, startMinutes: exactMins, date: baseDate }); // fire-and-forget
         return;
       }
 
@@ -1103,26 +1217,25 @@ export default function ActionEngine() {
       }
 
       if (finalStatus) {
+        let updatedFields = {};
+        if (finalStatus === 'inbox') {
+          updatedFields = { status: finalStatus, startDate: null };
+        } else if (finalStatus === 'next_few_days') {
+          const b = new Date(baseDate);
+          b.setDate(b.getDate() + 1);
+          updatedFields = { startDate: b.toISOString().split('T')[0], status: finalStatus };
+        } else if (finalStatus.toString().startsWith('backlog')) {
+          updatedFields = { status: finalStatus, startDate: null };
+        } else {
+          updatedFields = { startDate: finalStatus, status: '' };
+        }
+        updateTask(active.id, updatedFields); // async fire and forget
         setTasks(prev => {
           const oldIndex = prev.findIndex(t => t.id === active.id);
           const newIndex = targetTask ? prev.findIndex(t => t.id === over.id) : prev.length;
-
           let next = [...prev];
-          if (finalStatus === 'inbox') {
-            next[oldIndex].status = finalStatus;
-            next[oldIndex].startDate = '';
-          } else if (finalStatus === 'next_few_days') {
-            const b = new Date(baseDate);
-            b.setDate(b.getDate() + 1);
-            next[oldIndex].startDate = b.toISOString().split('T')[0];
-            next[oldIndex].status = finalStatus;
-          } else if (finalStatus.toString().startsWith('backlog')) {
-            next[oldIndex].status = finalStatus;
-            next[oldIndex].startDate = '';
-          } else {
-            next[oldIndex].startDate = finalStatus;
-            next[oldIndex].status = '';
-          }
+          next[oldIndex].status = updatedFields.status !== undefined ? updatedFields.status : next[oldIndex].status;
+          next[oldIndex].startDate = updatedFields.startDate === null ? '' : (updatedFields.startDate || next[oldIndex].startDate);
           next = arrayMove(next, oldIndex, newIndex);
           return next;
         });
@@ -1147,81 +1260,107 @@ export default function ActionEngine() {
     const isMainTimerActive = (activeTimer?.type === 'task' && activeTimer?.id === detailTask.id) || (activeTimer?.type === 'subtask' && detailTask.subtasks?.some(s => s.id === activeTimer.id));
 
     return (
-      <div className="flex flex-col h-full max-w-4xl mx-auto w-full pt-16 relative text-[#333]">
-        {/* Top Left Controls */}
-        <div className="absolute top-0 left-0 flex gap-2">
-          <button
-            onClick={() => setIsFocusMode(!isFocusMode)}
-            className={`px-3 py-1 text-xs border rounded transition-colors ${isFocusMode ? 'border-gray-400 text-gray-700 bg-gray-100' : 'border-gray-200 text-gray-400 hover:border-gray-300'}`}
-          >
-            ⏱ Focus
-          </button>
-        </div>
-
-        {/* Meta Top Bar (Priority, Dates) */}
-        <div className="absolute top-0 right-10 flex gap-4 text-xs font-semibold text-gray-400">
-          {detailSession && (
-            <div className="flex gap-1.5 items-center text-[#f2a950] bg-[#f2a950]/10 px-2 py-0.5 rounded font-bold">
-              <span>@</span>
+      <div className="flex flex-col h-full max-w-4xl mx-auto w-full pt-6 relative text-[#333]">
+        {/* Unified Top Header Bar */}
+        <div className="flex items-center justify-between w-full mb-8 text-xs font-semibold text-gray-400 relative z-[90]">
+          
+          {/* Left Side: Tag / Channel */}
+          <div className="flex flex-col items-start gap-1">
+            <span className="text-[9px] uppercase tracking-widest text-gray-400 pl-1">Channel</span>
+            <div className="flex items-center gap-2 hover:bg-gray-100 px-1 py-0.5 rounded transition-colors -ml-1">
+              <span className="text-[#f2a950] font-bold text-lg leading-none">#</span>
               <input
-                type="time"
-                value={(() => {
-                  const h = Math.floor(detailSession.startMinutes / 60);
-                  const m = detailSession.startMinutes % 60;
-                  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                })()}
-                onChange={(e) => {
-                  if (!e.target.value) return;
-                  const [hh, mm] = e.target.value.split(':');
-                  const newMins = parseInt(hh) * 60 + parseInt(mm);
-                  setSessions(prev => prev.map(s => s.id === detailSession.id ? { ...s, startMinutes: newMins } : s));
-                }}
-                className="bg-transparent font-mono focus:outline-none w-[65px] text-[#f2a950]"
+                type="text"
+                value={detailTask.tag || ''}
+                onChange={(e) => setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, tag: e.target.value } : t))}
+                onBlur={(e) => updateTask(detailTask.id, { tag: e.target.value })}
+                placeholder="work"
+                className="bg-transparent border-none focus:outline-none text-gray-800 text-[13px] w-24"
               />
             </div>
-          )}
-          <div className="flex gap-2 items-center">
-            <span>Tag:</span>
-            <input
-              type="text"
-              value={detailTask.tag || ''}
-              onChange={(e) => setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, tag: e.target.value } : t))}
-              placeholder="#work"
-              className="bg-transparent border-b border-dashed border-gray-300 focus:outline-none text-gray-600 w-16"
-            />
           </div>
-          <div className="flex gap-2 items-center">
-            <span>Priority:</span>
-            <select
-              value={detailTask.priority}
-              onChange={(e) => setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, priority: e.target.value } : t))}
-              className="bg-transparent border-b border-dashed border-gray-300 focus:outline-none text-gray-600"
+
+          {/* Right Side: Priority, Dates, Actions */}
+          <div className="flex gap-2 items-center shrink-0">
+            {detailSession && (
+              <div className="flex gap-1.5 items-center text-[#f2a950] bg-[#f2a950]/10 px-2 py-1 rounded font-bold shrink-0">
+                <span>@</span>
+                <input
+                  type="time"
+                  value={(() => {
+                    const h = Math.floor(detailSession.startMinutes / 60);
+                    const m = detailSession.startMinutes % 60;
+                    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                  })()}
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    const [hh, mm] = e.target.value.split(':');
+                    const newMins = parseInt(hh) * 60 + parseInt(mm);
+                    setSessions(prev => prev.map(s => s.id === detailSession.id ? { ...s, startMinutes: newMins } : s));
+                  }}
+                  className="bg-transparent font-mono focus:outline-none w-[65px] text-[#f2a950]"
+                />
+              </div>
+            )}
+            <div className="flex gap-1 items-center hover:bg-gray-100 px-2 py-1.5 rounded transition-colors shrink-0">
+              <span className="text-gray-400">🚩</span>
+              <select
+                value={detailTask.priority}
+                onChange={(e) => {
+                  setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, priority: e.target.value } : t));
+                  updateTask(detailTask.id, { priority: e.target.value });
+                }}
+                className="bg-transparent border-none focus:outline-none cursor-pointer text-gray-600 text-[13px]"
+              >
+                <option>None</option>
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+              </select>
+            </div>
+            
+            <div className="flex flex-col items-start leading-none gap-1 hover:bg-gray-100 px-2 py-1 rounded transition-colors -mt-1 shrink-0">
+              <span className="text-[9px] uppercase tracking-widest text-gray-400">Start</span>
+              <input
+                type="date"
+                value={detailTask.startDate}
+                onChange={(e) => {
+                  setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, startDate: e.target.value } : t));
+                  updateTask(detailTask.id, { startDate: e.target.value || null });
+                }}
+                className="bg-transparent border-none focus:outline-none text-gray-800 w-[105px] text-[13px] cursor-pointer"
+              />
+            </div>
+
+            <div className="flex flex-col items-start leading-none gap-1 hover:bg-gray-100 px-2 py-1 rounded transition-colors -mt-1 shrink-0">
+              <span className="text-[9px] uppercase tracking-widest text-gray-400">Due</span>
+              <input
+                type="date"
+                value={detailTask.dueDate}
+                onChange={(e) => {
+                  setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, dueDate: e.target.value } : t));
+                  updateTask(detailTask.id, { dueDate: e.target.value || null });
+                }}
+                className="bg-transparent border-none focus:outline-none text-gray-800 w-[105px] text-[13px] cursor-pointer"
+              />
+            </div>
+            
+            <button onClick={() => handleAddSubtask(detailTask.id)} className="flex items-center gap-1.5 hover:bg-gray-100 px-2 py-1.5 rounded transition-colors text-gray-500 font-medium text-[13px]">
+              <span className="text-lg leading-none mb-0.5 text-gray-400">+</span> Subtasks
+            </button>
+
+            <MoreActionsDropdown onDelete={() => handleDeleteTask(detailTask.id)} />
+
+            <button
+              onClick={() => setIsFocusMode(!isFocusMode)}
+              className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors text-lg ${isFocusMode ? 'bg-gray-200 text-gray-800' : 'text-gray-400 hover:bg-gray-100'}`}
+              title="Focus Mode"
             >
-              <option>None</option>
-              <option>Low</option>
-              <option>Medium</option>
-              <option>High</option>
-            </select>
-          </div>
-          <div className="flex gap-2 items-center">
-            <span>Start:</span>
-            <input
-              type="date"
-              value={detailTask.startDate}
-              onChange={(e) => setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, startDate: e.target.value } : t))}
-              className="bg-transparent border-b border-dashed border-gray-300 focus:outline-none text-gray-600 w-28"
-            />
-          </div>
-          <div className="flex gap-2 items-center">
-            <span>Due:</span>
-            <input
-              type="date"
-              value={detailTask.dueDate}
-              onChange={(e) => setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, dueDate: e.target.value } : t))}
-              className="bg-transparent border-b border-dashed border-gray-300 focus:outline-none text-gray-600 w-28"
-            />
+              ⤢
+            </button>
           </div>
         </div>
+
 
         {/* Header Row */}
         <div className="flex items-start justify-between mt-12 mb-10">
@@ -1236,6 +1375,7 @@ export default function ActionEngine() {
               type="text"
               value={detailTask.title}
               onChange={(e) => setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, title: e.target.value } : t))}
+              onBlur={(e) => updateTask(detailTask.id, { title: e.target.value })}
               className={`bg-transparent text-4xl font-bold focus:outline-none flex-1 min-w-0 ${detailTask.isCompleted ? 'text-gray-400 line-through' : 'text-gray-800'}`}
             />
           </div>
@@ -1251,7 +1391,8 @@ export default function ActionEngine() {
                 <input
                   type="number"
                   value={detailTask.plannedDurationMinutes}
-                  onChange={(e) => setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, plannedDurationMinutes: parseInt(e.target.value) } : t))}
+                  onChange={(e) => setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, plannedDurationMinutes: parseInt(e.target.value) || 0 } : t))}
+                  onBlur={(e) => updateTask(detailTask.id, { plannedDurationMinutes: parseInt(e.target.value) || 0 })}
                   className="bg-transparent text-[22px] font-mono text-gray-600 text-center w-16 focus:outline-none hover:bg-gray-100 rounded"
                 />
               </div>
@@ -1269,8 +1410,8 @@ export default function ActionEngine() {
                 }
               }}
               className={`w-28 h-10 rounded font-bold text-sm transition-all flex items-center justify-center gap-2 ${isMainTimerActive
-                  ? 'bg-transparent text-green-500 border border-green-500 hover:bg-green-50'
-                  : 'bg-green-500 text-white hover:bg-green-600'
+                ? 'bg-transparent text-green-500 border border-green-500 hover:bg-green-50'
+                : 'bg-green-500 text-white hover:bg-green-600'
                 }`}
             >
               {isMainTimerActive ? '⏸ STOP' : '▶ START'}
@@ -1291,19 +1432,22 @@ export default function ActionEngine() {
 
               <input
                 type="text"
+                autoFocus={sub.title === ''}
                 value={sub.title}
                 onKeyDown={(e) => {
-                  if (e.key === 'Backspace' && sub.title === '') {
+                  if (e.key === 'Backspace' && !e.target.value) {
                     setTasks(prev => prev.map(t => {
                       if (t.id !== detailTask.id) return t;
                       return { ...t, subtasks: t.subtasks.filter(s => s.id !== sub.id) };
                     }));
+                    deleteTask(sub.id);
                   }
                 }}
                 onChange={(e) => setTasks(prev => prev.map(t => {
                   if (t.id !== detailTask.id) return t;
                   return { ...t, subtasks: t.subtasks.map(s => s.id === sub.id ? { ...s, title: e.target.value } : s) };
                 }))}
+                onBlur={(e) => updateTask(sub.id, { title: e.target.value })}
                 className={`flex-1 bg-transparent focus:outline-none text-[15px] min-w-0 ${sub.isCompleted ? 'text-gray-400 line-through' : 'text-gray-700'}`}
               />
 
@@ -1318,13 +1462,14 @@ export default function ActionEngine() {
                     if (t.id !== detailTask.id) return t;
                     return { ...t, subtasks: t.subtasks.map(s => s.id === sub.id ? { ...s, plannedDurationMinutes: parseInt(e.target.value) || 0 } : s) };
                   }))}
+                  onBlur={(e) => updateTask(sub.id, { plannedDurationMinutes: parseInt(e.target.value) || 0 })}
                   className="font-mono text-sm text-gray-400 w-12 text-right bg-transparent focus:outline-none hover:bg-gray-100 rounded"
                 />
                 <button
                   onClick={() => toggleTimer(sub.id, 'subtask')}
                   className={`w-[72px] px-2 py-1 rounded font-bold text-[11px] flex items-center justify-center gap-1 transition-opacity ${activeTimer?.id === sub.id
-                      ? 'bg-transparent text-green-500 border border-green-400 opacity-100'
-                      : 'bg-transparent text-green-500 border border-green-400 opacity-0 group-hover:opacity-100'
+                    ? 'bg-transparent text-green-500 border border-green-400 opacity-100'
+                    : 'bg-transparent text-green-500 border border-green-400 opacity-0 group-hover:opacity-100'
                     }`}
                 >
                   {activeTimer?.id === sub.id ? '⏸ STOP' : '▶ START'}
@@ -1358,7 +1503,7 @@ export default function ActionEngine() {
 
   const projectionDays = getProjectionDays(baseDate);
   const allTags = [...new Set(tasks.map(t => t.tag).filter(Boolean))];
-  const filteredTasks = tasks.filter(t => taskFilter === 'all' || t.tag === taskFilter);
+  const filteredTasks = tasks.filter(t => (taskFilter === 'all' || t.tag === taskFilter) && t.showInKanban !== false);
 
   return (
     <div className="absolute inset-0 flex flex-col p-8 pt-6 overflow-hidden bg-[var(--color-bg-dark)]">
@@ -1413,6 +1558,7 @@ export default function ActionEngine() {
                 onOpenDetail={setDetailTaskId}
                 onToggleComplete={handleToggleComplete}
                 onToggleSubtaskComplete={handleToggleSubtaskComplete}
+                onDeleteTask={handleDeleteTask}
               />
               <KanbanColumn
                 id="inbox"
@@ -1425,15 +1571,16 @@ export default function ActionEngine() {
                 onOpenDetail={setDetailTaskId}
                 onToggleComplete={handleToggleComplete}
                 onToggleSubtaskComplete={handleToggleSubtaskComplete}
+                onDeleteTask={handleDeleteTask}
               />
             </div>
           )}
 
           {/* DYNAMIC PROJECTION COLUMNS AND SHUTDOWN VIEW */}
           {viewMode === 'shutdown' ? (
-            <ShutdownView 
-              dateStr={baseDate} 
-              tasks={filteredTasks} 
+            <ShutdownView
+              dateStr={baseDate}
+              tasks={filteredTasks}
               sessions={sessions}
               onAddTaskClick={setTaskCreatorConfig}
               activeTimer={activeTimer}
@@ -1441,40 +1588,42 @@ export default function ActionEngine() {
               onOpenDetail={setDetailTaskId}
               onToggleComplete={handleToggleComplete}
               onToggleSubtaskComplete={handleToggleSubtaskComplete}
+              onDeleteTask={handleDeleteTask}
             />
           ) : (
             <>
               {(viewMode === 'daily' ? [projectionDays[0]] : projectionDays).map(day => (
                 <KanbanColumn
                   onShutdownClick={handleShutdownClick}
-              key={day.id}
-              id={day.id}
-              title={day.title}
-              dateStr={day.dateStr}
-              tasks={filteredTasks.filter(t => t.startDate === day.dateStr || (!t.startDate && t.status === day.id))}
-              sessions={sessions}
-              onAddTaskClick={setTaskCreatorConfig}
-              activeTimer={activeTimer}
-              onToggleTimer={toggleTimer}
-              onOpenDetail={setDetailTaskId}
-              onToggleComplete={handleToggleComplete}
-              onToggleSubtaskComplete={handleToggleSubtaskComplete}
-            />
-          ))}
+                  key={day.id}
+                  id={day.id}
+                  title={day.title}
+                  dateStr={day.dateStr}
+                  tasks={filteredTasks.filter(t => t.startDate === day.dateStr || (!t.startDate && t.status === day.id))}
+                  sessions={sessions}
+                  onAddTaskClick={setTaskCreatorConfig}
+                  activeTimer={activeTimer}
+                  onToggleTimer={toggleTimer}
+                  onOpenDetail={setDetailTaskId}
+                  onToggleComplete={handleToggleComplete}
+                  onToggleSubtaskComplete={handleToggleSubtaskComplete}
+                  onDeleteTask={handleDeleteTask}
+                />
+              ))}
 
-          {/* CALENDAR (ALWAYS VISIBLE, RIGHT ALIGNED) */}
-          <CalendarGrid 
-            sessions={sessions} 
-            tasks={filteredTasks} 
-            onOpenDetail={setDetailTaskId} 
-            baseDate={baseDate} 
-            zoomLevel={calendarZoom} 
-            setZoomLevel={setCalendarZoom} 
-            calendarScrollRef={calendarScrollRef}
-            onDoubleClickTime={(mins) => {
-              setTaskCreatorConfig({ status: baseDate, dateStr: baseDate, startMinutes: mins });
-            }} 
-          />
+              {/* CALENDAR (ALWAYS VISIBLE, RIGHT ALIGNED) */}
+              <CalendarGrid
+                sessions={sessions}
+                tasks={filteredTasks}
+                onOpenDetail={setDetailTaskId}
+                baseDate={baseDate}
+                zoomLevel={calendarZoom}
+                setZoomLevel={setCalendarZoom}
+                calendarScrollRef={calendarScrollRef}
+                onDoubleClickTime={(mins) => {
+                  setTaskCreatorConfig({ status: baseDate, dateStr: baseDate, startMinutes: mins });
+                }}
+              />
             </>
           )}
         </div>

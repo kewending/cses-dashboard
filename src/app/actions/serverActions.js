@@ -3,6 +3,15 @@
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
+function formatTask(t) {
+  return {
+    ...t,
+    startDate: t.startDate ? t.startDate.toISOString().split('T')[0] : '',
+    dueDate: t.dueDate ? t.dueDate.toISOString().split('T')[0] : '',
+    subtasks: t.subtasks ? t.subtasks.map(formatTask) : undefined
+  };
+}
+
 export async function getTasks() {
   const tasks = await prisma.task.findMany({
     include: {
@@ -10,7 +19,7 @@ export async function getTasks() {
       sessions: true,
     }
   });
-  return tasks;
+  return tasks.map(formatTask);
 }
 
 export async function getSessions() {
@@ -24,17 +33,24 @@ export async function getObjectives() {
 }
 
 export async function createTask(data) {
-  const { startDate, dueDate, ...rest } = data;
+  const { startDate, dueDate, subtasks, sessions, id, ...rest } = data;
   
-  const task = await prisma.task.create({
-    data: {
-      ...rest,
-      startDate: startDate ? new Date(startDate) : null,
-      dueDate: dueDate ? new Date(dueDate) : null,
-    },
-  });
-  revalidatePath('/actions');
-  return task;
+  try {
+    const task = await prisma.task.create({
+      data: {
+        ...rest,
+        id: id || undefined,
+        startDate: startDate ? new Date(startDate) : null,
+        dueDate: dueDate ? new Date(dueDate) : null,
+      },
+    });
+    revalidatePath('/actions');
+    return formatTask(task);
+  } catch (err) {
+    const fs = require('fs');
+    fs.appendFileSync('C:/Users/30313357/.gemini/antigravity-ide/brain/b90c2e57-8f83-4651-a19e-38a32356a2b2/scratch/log.txt', '\\nError in createTask: ' + err.stack + '\\nData: ' + JSON.stringify(data));
+    throw err;
+  }
 }
 
 export async function updateTask(id, data) {
@@ -92,13 +108,23 @@ export async function deleteSession(id) {
   revalidatePath('/actions');
 }
 
+export async function deleteTask(id) {
+  await prisma.task.delete({
+    where: { id }
+  });
+  revalidatePath('/actions');
+}
+
 export async function createSubtask(parentId, data) {
+  const { startDate, dueDate, ...rest } = data;
   const subtask = await prisma.task.create({
     data: {
-      ...data,
+      ...rest,
       parentTaskId: parentId,
+      startDate: startDate ? new Date(startDate) : null,
+      dueDate: dueDate ? new Date(dueDate) : null,
     }
   });
   revalidatePath('/actions');
-  return subtask;
+  return formatTask(subtask);
 }

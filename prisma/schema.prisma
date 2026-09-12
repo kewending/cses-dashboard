@@ -21,9 +21,10 @@ model Task {
   actualDurationSeconds  Int       @default(0)
   isCompleted            Boolean   @default(false)
   notes                  String?
+  showInKanban           Boolean   @default(true)
   
   parentTaskId           String?
-  parentTask             Task?     @relation("Subtasks", fields: [parentTaskId], references: [id])
+  parentTask             Task?     @relation("Subtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
   subtasks               Task[]    @relation("Subtasks")
   
   sessions               Session[]
