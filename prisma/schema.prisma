@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Task {
+  id                     String    @id @default(cuid())
+  title                  String
+  status                 String    @default("today")
+  tag                    String?
+  priority               String?   // 'Low', 'Medium', 'High'
+  
+  startDate              DateTime?
+  dueDate                DateTime?
+  
+  plannedDurationMinutes Int       @default(30)
+  actualDurationSeconds  Int       @default(0)
+  isCompleted            Boolean   @default(false)
+  notes                  String?
+  
+  parentTaskId           String?
+  parentTask             Task?     @relation("Subtasks", fields: [parentTaskId], references: [id])
+  subtasks               Task[]    @relation("Subtasks")
+  
+  sessions               Session[]
+  objectiveId            String?
+  objective              Objective? @relation(fields: [objectiveId], references: [id])
+
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  taskId       String
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  startMinutes Int      
+  date         DateTime 
+}
+
+model Objective {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  tasks       Task[]
+}
