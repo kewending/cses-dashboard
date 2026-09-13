@@ -78,6 +78,11 @@ export async function toggleTaskComplete(id, isCompleted) {
 }
 
 export async function createSession(data) {
+  // Prevent duplicates by deleting any existing session for this task
+  await prisma.session.deleteMany({
+    where: { taskId: data.taskId }
+  });
+
   const session = await prisma.session.create({
     data: {
       taskId: data.taskId,
