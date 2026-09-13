@@ -20,6 +20,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import { Markdown } from 'tiptap-markdown';
 import { getTasks, getSessions, getObjectives, createTask, updateTask, toggleTaskComplete, createSession, updateSession, deleteSession, createSubtask, deleteTask } from './serverActions';
 
 // --- MOCK DATA ---
@@ -261,6 +265,44 @@ function MoreActionsDropdown({ onDelete }) {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+
+function TaskNotes({ initialNote, onSave }) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Markdown,
+      Placeholder.configure({
+        placeholder: 'Add a description...',
+        emptyEditorClass: 'is-editor-empty',
+      }),
+    ],
+    content: initialNote || '',
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm max-w-none text-gray-700 prose-headings:font-bold prose-headings:text-gray-800 prose-a:text-green-600 hover:prose-a:text-green-500 prose-p:leading-relaxed prose-ul:my-1 prose-li:my-0 pb-4 focus:outline-none min-h-[40px]',
+      },
+    },
+    onBlur: ({ editor }) => {
+      const markdown = editor.storage.markdown.getMarkdown();
+      if (markdown !== initialNote) {
+        onSave(markdown);
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (editor && initialNote !== editor.storage.markdown.getMarkdown()) {
+      editor.commands.setContent(initialNote || '');
+    }
+  }, [initialNote, editor]);
+
+  return (
+    <div className="w-full relative rounded-md transition-colors hover:bg-gray-50/50 p-2 -ml-2">
+      <EditorContent editor={editor} />
     </div>
   );
 }
@@ -1419,6 +1461,8 @@ export default function ActionEngine() {
           </div>
         </div>
 
+
+
         {/* Subtasks List */}
         <div className="flex flex-col gap-1 pl-11 mb-8">
           {detailTask.subtasks?.map(sub => (
@@ -1487,13 +1531,14 @@ export default function ActionEngine() {
           </button>
         </div>
 
-        {/* Notes Section */}
-        <div className="mt-4 pl-11 flex-1 flex flex-col min-h-[200px]">
-          <textarea
-            value={detailTask.notes}
-            onChange={(e) => setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, notes: e.target.value } : t))}
-            placeholder="Add a description or notes for this task..."
-            className="w-full flex-1 bg-transparent focus:outline-none text-gray-600 resize-none text-sm leading-relaxed"
+        {/* Task Notes */}
+        <div className="pl-11 pr-4 mb-6 flex-1">
+          <TaskNotes
+            initialNote={detailTask.notes}
+            onSave={(note) => {
+              setTasks(prev => prev.map(t => t.id === detailTask.id ? { ...t, notes: note } : t));
+              updateTask(detailTask.id, { notes: note });
+            }}
           />
         </div>
 
