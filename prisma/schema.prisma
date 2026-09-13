@@ -22,6 +22,7 @@ model Task {
   isCompleted            Boolean   @default(false)
   notes                  String?
   showInKanban           Boolean   @default(true)
+  order                  Int       @default(0)
   
   parentTaskId           String?
   parentTask             Task?     @relation("Subtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)

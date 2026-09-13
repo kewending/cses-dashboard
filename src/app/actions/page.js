@@ -19,7 +19,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getTasks, getSessions, getObjectives, createTask, updateTask, toggleTaskComplete, createSession, updateSession, deleteSession, createSubtask, deleteTask } from './serverActions';
+import { getTasks, getSessions, getObjectives, createTask, updateTask, toggleTaskComplete, createSession, updateSession, deleteSession, createSubtask, deleteTask, reorderSubtasks } from './serverActions';
 
 // --- MOCK DATA ---
 const INITIAL_TASKS = [
@@ -82,6 +82,85 @@ import TaskCreatorModal from '@/components/TaskCreatorModal';
 import ShutdownView from '@/components/ShutdownView';
 import KanbanColumn from '@/components/KanbanColumn';
 import { HOURS, DAYS_OF_WEEK, formatRelativeDate, formatAbsoluteDate, getProjectionDays, formatActualTime, formatMins, formatSessionTime, isNextFewDays } from '@/lib/utils';
+
+function SortableSubtaskItem({ sub, detailTaskId, activeTimer, onToggleSubtaskComplete, onToggleTimer, updateTask, setTasks, deleteTask }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sub.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative',
+    zIndex: isDragging ? 50 : 1
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`flex items-center py-2 group ${isDragging ? 'bg-white rounded-lg shadow-xl' : ''}`}>
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 mr-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity -ml-7 w-6 flex items-center justify-center">
+        <svg width="12" height="20" viewBox="0 0 16 24" fill="currentColor">
+          <circle cx="6" cy="4" r="2" />
+          <circle cx="10" cy="4" r="2" />
+          <circle cx="6" cy="12" r="2" />
+          <circle cx="10" cy="12" r="2" />
+          <circle cx="6" cy="20" r="2" />
+          <circle cx="10" cy="20" r="2" />
+        </svg>
+      </button>
+
+      <button
+        onClick={() => onToggleSubtaskComplete(detailTaskId, sub.id)}
+        className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors mr-3 ${sub.isCompleted ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 text-transparent hover:border-green-400'}`}
+      >
+        <span className="text-[10px] font-bold">✓</span>
+      </button>
+
+      <input
+        type="text"
+        autoFocus={sub.title === ''}
+        value={sub.title}
+        onKeyDown={(e) => {
+          if (e.key === 'Backspace' && !e.target.value) {
+            setTasks(prev => prev.map(t => {
+              if (t.id !== detailTaskId) return t;
+              return { ...t, subtasks: t.subtasks.filter(s => s.id !== sub.id) };
+            }));
+            deleteTask(sub.id);
+          }
+        }}
+        onChange={(e) => setTasks(prev => prev.map(t => {
+          if (t.id !== detailTaskId) return t;
+          return { ...t, subtasks: t.subtasks.map(s => s.id === sub.id ? { ...s, title: e.target.value } : s) };
+        }))}
+        onBlur={(e) => updateTask(sub.id, { title: e.target.value })}
+        className={`flex-1 bg-transparent focus:outline-none text-[15px] min-w-0 ${sub.isCompleted ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+      />
+
+      <div className="flex items-center gap-6 ml-auto pl-4">
+        <span className={`font-mono text-sm w-16 text-right ${sub.actualDurationSeconds > 0 ? 'text-green-500' : 'text-gray-400'}`}>
+          {formatActualTime(sub.actualDurationSeconds)}
+        </span>
+        <input
+          type="number"
+          value={sub.plannedDurationMinutes}
+          onChange={(e) => setTasks(prev => prev.map(t => {
+            if (t.id !== detailTaskId) return t;
+            return { ...t, subtasks: t.subtasks.map(s => s.id === sub.id ? { ...s, plannedDurationMinutes: parseInt(e.target.value) || 0 } : s) };
+          }))}
+          onBlur={(e) => updateTask(sub.id, { plannedDurationMinutes: parseInt(e.target.value) || 0 })}
+          className="font-mono text-sm text-gray-400 w-12 text-right bg-transparent focus:outline-none hover:bg-gray-100 rounded"
+        />
+        <button
+          onClick={() => onToggleTimer(sub.id, 'subtask')}
+          className={`w-[72px] px-2 py-1 rounded font-bold text-[11px] flex items-center justify-center gap-1 transition-opacity ${activeTimer?.id === sub.id
+            ? 'bg-transparent text-green-500 border border-green-400 opacity-100'
+            : 'bg-transparent text-green-500 border border-green-400 opacity-0 group-hover:opacity-100'
+            }`}
+        >
+          {activeTimer?.id === sub.id ? '⏸ STOP' : '▶ START'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function ActionEngine() {
   const [tasks, setTasks] = useState([]);
@@ -589,62 +668,47 @@ export default function ActionEngine() {
 
         {/* Subtasks List */}
         <div className="flex flex-col gap-1 pl-11 mb-8">
-          {detailTask.subtasks?.map(sub => (
-            <div key={sub.id} className="flex items-center py-2 group">
-              <button
-                onClick={() => handleToggleSubtaskComplete(detailTask.id, sub.id)}
-                className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors mr-3 ${sub.isCompleted ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 text-transparent hover:border-green-400'}`}
-              >
-                <span className="text-[10px] font-bold">✓</span>
-              </button>
-
-              <input
-                type="text"
-                autoFocus={sub.title === ''}
-                value={sub.title}
-                onKeyDown={(e) => {
-                  if (e.key === 'Backspace' && !e.target.value) {
-                    setTasks(prev => prev.map(t => {
-                      if (t.id !== detailTask.id) return t;
-                      return { ...t, subtasks: t.subtasks.filter(s => s.id !== sub.id) };
-                    }));
-                    deleteTask(sub.id);
-                  }
-                }}
-                onChange={(e) => setTasks(prev => prev.map(t => {
-                  if (t.id !== detailTask.id) return t;
-                  return { ...t, subtasks: t.subtasks.map(s => s.id === sub.id ? { ...s, title: e.target.value } : s) };
-                }))}
-                onBlur={(e) => updateTask(sub.id, { title: e.target.value })}
-                className={`flex-1 bg-transparent focus:outline-none text-[15px] min-w-0 ${sub.isCompleted ? 'text-gray-400 line-through' : 'text-gray-700'}`}
-              />
-
-              <div className="flex items-center gap-6 ml-auto pl-4">
-                <span className={`font-mono text-sm w-16 text-right ${sub.actualDurationSeconds > 0 ? 'text-green-500' : 'text-gray-400'}`}>
-                  {formatActualTime(sub.actualDurationSeconds)}
-                </span>
-                <input
-                  type="number"
-                  value={sub.plannedDurationMinutes}
-                  onChange={(e) => setTasks(prev => prev.map(t => {
+          <DndContext
+            id="subtasks-dnd"
+            collisionDetection={closestCenter}
+            onDragEnd={(e) => {
+              const { active, over } = e;
+              if (over && active.id !== over.id) {
+                let updatedSubtasks = null;
+                setTasks(prev => {
+                  return prev.map(t => {
                     if (t.id !== detailTask.id) return t;
-                    return { ...t, subtasks: t.subtasks.map(s => s.id === sub.id ? { ...s, plannedDurationMinutes: parseInt(e.target.value) || 0 } : s) };
-                  }))}
-                  onBlur={(e) => updateTask(sub.id, { plannedDurationMinutes: parseInt(e.target.value) || 0 })}
-                  className="font-mono text-sm text-gray-400 w-12 text-right bg-transparent focus:outline-none hover:bg-gray-100 rounded"
+                    const oldIndex = t.subtasks.findIndex(s => s.id === active.id);
+                    const newIndex = t.subtasks.findIndex(s => s.id === over.id);
+                    const newSubtasks = arrayMove(t.subtasks, oldIndex, newIndex);
+                    updatedSubtasks = newSubtasks;
+                    return { ...t, subtasks: newSubtasks };
+                  });
+                });
+                
+                if (updatedSubtasks) {
+                  const taskOrders = updatedSubtasks.map((s, idx) => ({ id: s.id, order: idx }));
+                  reorderSubtasks(taskOrders);
+                }
+              }
+            }}
+          >
+            <SortableContext items={detailTask.subtasks?.map(s => s.id) || []} strategy={verticalListSortingStrategy}>
+              {detailTask.subtasks?.map(sub => (
+                <SortableSubtaskItem 
+                  key={sub.id} 
+                  sub={sub} 
+                  detailTaskId={detailTask.id} 
+                  activeTimer={activeTimer} 
+                  onToggleSubtaskComplete={handleToggleSubtaskComplete} 
+                  onToggleTimer={toggleTimer} 
+                  updateTask={updateTask} 
+                  setTasks={setTasks} 
+                  deleteTask={deleteTask} 
                 />
-                <button
-                  onClick={() => toggleTimer(sub.id, 'subtask')}
-                  className={`w-[72px] px-2 py-1 rounded font-bold text-[11px] flex items-center justify-center gap-1 transition-opacity ${activeTimer?.id === sub.id
-                    ? 'bg-transparent text-green-500 border border-green-400 opacity-100'
-                    : 'bg-transparent text-green-500 border border-green-400 opacity-0 group-hover:opacity-100'
-                    }`}
-                >
-                  {activeTimer?.id === sub.id ? '⏸ STOP' : '▶ START'}
-                </button>
-              </div>
-            </div>
-          ))}
+              ))}
+            </SortableContext>
+          </DndContext>
 
           <button
             onClick={() => handleAddSubtask(detailTask.id)}

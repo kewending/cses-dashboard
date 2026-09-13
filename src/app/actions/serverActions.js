@@ -15,7 +15,9 @@ function formatTask(t) {
 export async function getTasks() {
   const tasks = await prisma.task.findMany({
     include: {
-      subtasks: true,
+      subtasks: {
+        orderBy: { order: 'asc' }
+      },
       sessions: true,
     }
   });
@@ -132,4 +134,17 @@ export async function createSubtask(parentId, data) {
   });
   revalidatePath('/actions');
   return formatTask(subtask);
+}
+
+export async function reorderSubtasks(taskOrders) {
+  // taskOrders is an array of { id: string, order: number }
+  const updates = taskOrders.map((t) => 
+    prisma.task.update({
+      where: { id: t.id },
+      data: { order: t.order },
+    })
+  );
+  
+  await prisma.$transaction(updates);
+  revalidatePath('/actions');
 }
