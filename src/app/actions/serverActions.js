@@ -30,8 +30,119 @@ export async function getSessions() {
 }
 
 export async function getObjectives() {
-  const objectives = await prisma.objective.findMany();
+  const objectives = await prisma.objective.findMany({
+    include: {
+      projects: true
+    }
+  });
   return objectives;
+}
+
+export async function createObjective(data) {
+  const objective = await prisma.objective.create({
+    data: {
+      title: data.title,
+      description: data.description,
+    }
+  });
+  revalidatePath('/actions');
+  return objective;
+}
+
+export async function updateObjective(id, data) {
+  const objective = await prisma.objective.update({
+    where: { id },
+    data,
+  });
+  revalidatePath('/actions');
+  return objective;
+}
+
+export async function deleteObjective(id) {
+  try {
+    const deleted = await prisma.objective.delete({
+      where: { id }
+    });
+    revalidatePath('/actions');
+    return deleted;
+  } catch (err) {
+    console.error('Error deleting objective:', err);
+    throw err;
+  }
+}
+
+function formatProject(p) {
+  return {
+    ...p,
+    startDate: p.startDate ? p.startDate.toISOString().split('T')[0] : '',
+    endDate: p.endDate ? p.endDate.toISOString().split('T')[0] : '',
+    subprojects: p.subprojects ? p.subprojects.map(formatProject) : undefined
+  };
+}
+
+export async function getProjects() {
+  const projects = await prisma.project.findMany({
+    include: {
+      subprojects: true,
+      tasks: true,
+    }
+  });
+  return projects.map(formatProject);
+}
+
+export async function createProject(data) {
+  const { startDate, endDate, subprojects, tasks, ...rest } = data;
+  const project = await prisma.project.create({
+    data: {
+      ...rest,
+      startDate: startDate ? new Date(startDate) : null,
+      endDate: endDate ? new Date(endDate) : null,
+    }
+  });
+  revalidatePath('/actions');
+  return formatProject(project);
+}
+
+export async function updateProject(id, data) {
+  const { startDate, endDate, subprojects, tasks, ...rest } = data;
+  let updateData = { ...rest };
+  if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
+  if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+
+  const project = await prisma.project.update({
+    where: { id },
+    data: updateData,
+  });
+  revalidatePath('/actions');
+  return formatProject(project);
+}
+
+export async function deleteProject(id) {
+  try {
+    const deleted = await prisma.project.delete({
+      where: { id }
+    });
+    return deleted;
+  } catch (err) {
+    console.error('Error deleting project:', err);
+    throw err;
+  }
+}
+
+export async function reorderProjects(projectIds) {
+  try {
+    const updates = projectIds.map((id, index) =>
+      prisma.project.update({
+        where: { id },
+        data: { order: index },
+      })
+    );
+    await prisma.$transaction(updates);
+    return true;
+  } catch (error) {
+    console.error('Error reordering projects:', error);
+    return false;
+  }
 }
 
 export async function createTask(data) {

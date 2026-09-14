@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { formatAbsoluteDate, HOURS } from '@/lib/utils';
 
-export default function TaskCreatorModal({ config, onClose, onAdd }) {
+export default function TaskCreatorModal({ config, onClose, onAdd, projects = [] }) {
   const [title, setTitle] = useState('');
   const [duration, setDuration] = useState('');
   const [tag, setTag] = useState('');
   const [priority, setPriority] = useState('None');
   const [startDate, setStartDate] = useState(config?.dateStr || '');
+  const [projectId, setProjectId] = useState(config?.projectId || '');
 
   const inputRef = useRef(null);
 
@@ -32,11 +33,11 @@ export default function TaskCreatorModal({ config, onClose, onAdd }) {
       tag: tag.replace('#', ''),
       status: config.status,
       actualDurationSeconds: 0,
-      objectiveId: null,
+      projectId: projectId || null,
       isCompleted: false,
       priority,
       startDate,
-      dueDate: '',
+      dueDate: startDate,
       notes: '',
       subtasks: []
     });
@@ -45,9 +46,9 @@ export default function TaskCreatorModal({ config, onClose, onAdd }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="absolute inset-0" onClick={onClose}></div>
-      <form onSubmit={handleSubmit} className="bg-white text-gray-800 rounded-xl shadow-2xl flex flex-col relative z-20 overflow-hidden w-[550px]">
+      <form onSubmit={handleSubmit} className="bg-white text-gray-800 rounded-xl shadow-2xl flex flex-col relative z-20 overflow-hidden w-[720px]">
         <input
           ref={inputRef}
           type="text"
@@ -82,6 +83,15 @@ export default function TaskCreatorModal({ config, onClose, onAdd }) {
               <option>Low</option>
               <option>Medium</option>
               <option>High</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5 hover:text-gray-800 transition-colors flex-shrink-0 mt-2">
+            <span>📁</span>
+            <select value={projectId} onChange={e => setProjectId(e.target.value)} className="bg-transparent focus:outline-none cursor-pointer">
+              <option value="">No Project</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.title}</option>
+              ))}
             </select>
           </div>
         </div>

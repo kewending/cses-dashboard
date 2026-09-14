@@ -19,7 +19,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getTasks, getSessions, getObjectives, createTask, updateTask, toggleTaskComplete, createSession, updateSession, deleteSession, createSubtask, deleteTask, reorderSubtasks } from './serverActions';
+import { getTasks, getSessions, getObjectives, createTask, updateTask, toggleTaskComplete, createSession, updateSession, deleteSession, createSubtask, deleteTask, reorderSubtasks, getProjects, createProject, updateProject, deleteProject, createObjective, deleteObjective, reorderProjects, updateObjective } from './serverActions';
 
 // --- MOCK DATA ---
 const INITIAL_TASKS = [
@@ -81,6 +81,7 @@ import CalendarGrid from '@/components/CalendarGrid';
 import TaskCreatorModal from '@/components/TaskCreatorModal';
 import ShutdownView from '@/components/ShutdownView';
 import KanbanColumn from '@/components/KanbanColumn';
+import ProjectsView from '@/components/ProjectsView';
 import { HOURS, DAYS_OF_WEEK, formatRelativeDate, formatAbsoluteDate, getProjectionDays, formatActualTime, formatMins, formatSessionTime, isNextFewDays } from '@/lib/utils';
 
 function SortableSubtaskItem({ sub, detailTaskId, activeTimer, onToggleSubtaskComplete, onToggleTimer, updateTask, setTasks, deleteTask }) {
@@ -166,13 +167,15 @@ export default function ActionEngine() {
   const [tasks, setTasks] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [objectives, setObjectives] = useState([]);
+  const [projects, setProjects] = useState([]);
 
   useEffect(() => {
     async function loadData() {
-      const [t, s, o] = await Promise.all([getTasks(), getSessions(), getObjectives()]);
+      const [t, s, o, p] = await Promise.all([getTasks(), getSessions(), getObjectives(), getProjects()]);
       setTasks(t);
       setSessions(s);
       setObjectives(o);
+      setProjects(p);
     }
     loadData();
   }, []);
@@ -188,6 +191,7 @@ export default function ActionEngine() {
   const [taskFilter, setTaskFilter] = useState('all');
   const [calendarZoom, setCalendarZoom] = useState(80);
   const calendarScrollRef = useRef(0);
+  const [objectiveFilter, setObjectiveFilter] = useState('all');
 
   const [viewMode, setViewMode] = useState('daily');
   const [activeId, setActiveId] = useState(null);
@@ -223,28 +227,43 @@ export default function ActionEngine() {
 
   // Modal State
   const [detailTaskId, setDetailTaskId] = useState(null);
+  const [detailProjectId, setDetailProjectId] = useState(null);
+  const [detailObjectiveId, setDetailObjectiveId] = useState(null);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [focusType, setFocusType] = useState('focus');
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   // --- TIME TRACKER ENGINE ---
+  const lastTickRef = useRef(Date.now());
+
   useEffect(() => {
+    if (!activeTimer) return;
+    
+    lastTickRef.current = Date.now();
+    
     const interval = setInterval(() => {
-      setTasks(prev => prev.map(t => {
-        if (activeTimer?.type === 'task' && activeTimer?.id === t.id) {
-          return { ...t, actualDurationSeconds: t.actualDurationSeconds + 1 };
-        }
-        if (activeTimer?.type === 'subtask' && t.subtasks?.length) {
-          if (t.subtasks.some(s => s.id === activeTimer.id)) {
-            return {
-              ...t,
-              subtasks: t.subtasks.map(s => s.id === activeTimer.id ? { ...s, actualDurationSeconds: s.actualDurationSeconds + 1 } : s)
-            };
+      const now = Date.now();
+      const elapsedSeconds = Math.floor((now - lastTickRef.current) / 1000);
+      
+      if (elapsedSeconds > 0) {
+        lastTickRef.current += elapsedSeconds * 1000;
+        
+        setTasks(prev => prev.map(t => {
+          if (activeTimer.type === 'task' && activeTimer.id === t.id) {
+            return { ...t, actualDurationSeconds: t.actualDurationSeconds + elapsedSeconds };
           }
-        }
-        return t;
-      }));
+          if (activeTimer.type === 'subtask' && t.subtasks?.length) {
+            if (t.subtasks.some(s => s.id === activeTimer.id)) {
+              return {
+                ...t,
+                subtasks: t.subtasks.map(s => s.id === activeTimer.id ? { ...s, actualDurationSeconds: s.actualDurationSeconds + elapsedSeconds } : s)
+              };
+            }
+          }
+          return t;
+        }));
+      }
     }, 1000);
     return () => clearInterval(interval);
   }, [activeTimer]);
@@ -311,13 +330,14 @@ export default function ActionEngine() {
 
     await toggleTaskComplete(subtaskId, !subtask.isCompleted);
 
+    const newSubtasks = task.subtasks.map(s => s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s);
+    const allSubtasksCompleted = newSubtasks.length > 0 && newSubtasks.every(s => s.isCompleted);
+    if (allSubtasksCompleted !== task.isCompleted) {
+      toggleTaskComplete(taskId, allSubtasksCompleted); // fire-and-forget
+    }
+
     setTasks(prev => prev.map(t => {
       if (t.id !== taskId) return t;
-      const newSubtasks = t.subtasks.map(s => s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s);
-      const allSubtasksCompleted = newSubtasks.length > 0 && newSubtasks.every(s => s.isCompleted);
-      if (allSubtasksCompleted !== t.isCompleted) {
-        toggleTaskComplete(taskId, allSubtasksCompleted); // fire-and-forget
-      }
       return {
         ...t,
         isCompleted: allSubtasksCompleted,
@@ -503,6 +523,9 @@ export default function ActionEngine() {
     const totalActualSeconds = detailTask.actualDurationSeconds + (detailTask.subtasks?.reduce((acc, sub) => acc + sub.actualDurationSeconds, 0) || 0);
     const detailSession = sessions.find(s => s.taskId === detailTask.id);
     const isMainTimerActive = (activeTimer?.type === 'task' && activeTimer?.id === detailTask.id) || (activeTimer?.type === 'subtask' && detailTask.subtasks?.some(s => s.id === activeTimer.id));
+    
+    const detailTaskProject = detailTask.projectId ? projects.find(p => p.id === detailTask.projectId) : null;
+    const detailTaskObjective = detailTaskProject?.objectiveId ? objectives.find(o => o.id === detailTaskProject.objectiveId) : null;
 
     return (
       <div className="flex flex-col h-full max-w-4xl mx-auto w-full pt-6 relative text-[#333]">
@@ -606,6 +629,40 @@ export default function ActionEngine() {
           </div>
         </div>
 
+        {/* Breadcrumb */}
+        {(detailTaskObjective || detailTaskProject) && (
+          <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 mt-2 mb-[-1.5rem] px-1">
+            {detailTaskObjective && (
+              <>
+                <span 
+                  className="text-gray-400 cursor-pointer hover:text-gray-600 transition-colors"
+                  onClick={() => {
+                    setDetailTaskId(null);
+                    setDetailObjectiveId(detailTaskObjective.id);
+                    setViewMode('projects');
+                  }}
+                >
+                  🎯 {detailTaskObjective.title}
+                </span>
+                <span className="text-gray-300">/</span>
+              </>
+            )}
+            {detailTaskProject && (
+              <>
+                <span 
+                  className="text-gray-400 cursor-pointer hover:text-gray-600 transition-colors"
+                  onClick={() => {
+                    setDetailTaskId(null);
+                    setDetailProjectId(detailTaskProject.id);
+                    setViewMode('projects');
+                  }}
+                >
+                  📁 {detailTaskProject.title}
+                </span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Header Row */}
         <div className="flex items-start justify-between mt-12 mb-10">
@@ -744,8 +801,46 @@ export default function ActionEngine() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <DateSelectorDropdown baseDate={baseDate} setBaseDate={setBaseDate} />
-          <FilterDropdown taskFilter={taskFilter} setTaskFilter={setTaskFilter} allTags={allTags} />
+          {viewMode !== 'projects' && (
+            <DateSelectorDropdown baseDate={baseDate} setBaseDate={setBaseDate} />
+          )}
+          
+          {viewMode === 'projects' ? (
+            <div className="relative z-50 group">
+              <button className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-dark)] text-white/90 rounded border border-white/10 hover:bg-white/10 text-sm font-semibold shadow-sm transition-colors">
+                <span className="text-[12px]">≡</span> Filter
+              </button>
+              <div className="absolute top-full mt-2 left-0 w-64 bg-[#232323] rounded-lg shadow-2xl border border-white/10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 py-2">
+                <div className="px-4 pb-2 text-xs text-white/40 font-semibold border-b border-white/10 mb-2 mt-1">
+                  Filter by objective:
+                </div>
+                <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                  <button onClick={() => setObjectiveFilter('all')} className="w-full text-left px-4 py-1.5 hover:bg-white/5 text-sm text-white/80 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <span className="text-green-500 text-lg">🎯</span> all
+                    </span>
+                    {objectiveFilter === 'all' && <span className="text-white/50 text-xs">✓</span>}
+                  </button>
+                  {objectives.map(obj => (
+                    <button key={obj.id} onClick={() => setObjectiveFilter(obj.id)} className="w-full text-left px-4 py-1.5 hover:bg-white/5 text-sm text-white/80 flex items-center justify-between">
+                      <span className="flex items-center gap-2 pl-4">
+                        <span className="text-[#f2a950] text-lg">🎯</span> {obj.title}
+                      </span>
+                      {objectiveFilter === obj.id && <span className="text-white/50 text-xs">✓</span>}
+                    </button>
+                  ))}
+                  <button onClick={() => setObjectiveFilter('unassigned')} className="w-full text-left px-4 py-1.5 hover:bg-white/5 text-sm text-white/80 flex items-center justify-between">
+                    <span className="flex items-center gap-2 pl-4">
+                      <span className="text-gray-500 text-lg">📥</span> unassigned
+                    </span>
+                    {objectiveFilter === 'unassigned' && <span className="text-white/50 text-xs">✓</span>}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <FilterDropdown taskFilter={taskFilter} setTaskFilter={setTaskFilter} allTags={allTags} />
+          )}
         </div>
         <div className="flex gap-2 bg-black/40 p-1 rounded-full border border-white/10">
           <button
@@ -760,6 +855,12 @@ export default function ActionEngine() {
           >
             Multi-Day Projection
           </button>
+          <button
+            onClick={() => setViewMode('projects')}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${viewMode === 'projects' ? 'bg-[var(--color-accent)] text-white' : 'text-[var(--color-text-muted)] hover:text-white'}`}
+          >
+            Projects
+          </button>
         </div>
       </div>
 
@@ -769,6 +870,7 @@ export default function ActionEngine() {
           config={taskCreatorConfig}
           onClose={() => setTaskCreatorConfig(null)}
           onAdd={handleAddTask}
+          projects={projects}
         />
       )}
 
@@ -776,41 +878,37 @@ export default function ActionEngine() {
       <DndContext id="action-dnd" sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex-1 flex gap-4 min-h-0 overflow-x-auto pb-4">
 
-          {/* DAILY VIEW: BACKLOG PANEL */}
-          {viewMode === 'daily' && (
-            <div className="w-[350px] flex-shrink-0 flex flex-col gap-4">
-              <KanbanColumn
-                id="next_few_days"
-                title="Next few day"
-                tasks={filteredTasks.filter(t => isNextFewDays(t.startDate))}
-                sessions={sessions}
-                onAddTaskClick={null}
-                showAdd={false}
-                activeTimer={activeTimer}
-                onToggleTimer={toggleTimer}
-                onOpenDetail={setDetailTaskId}
-                onToggleComplete={handleToggleComplete}
-                onToggleSubtaskComplete={handleToggleSubtaskComplete}
-                onDeleteTask={handleDeleteTask}
-              />
-              <KanbanColumn
-                id="inbox"
-                title="Inbox"
-                tasks={filteredTasks.filter(t => !t.startDate)}
-                sessions={sessions}
-                onAddTaskClick={setTaskCreatorConfig}
-                activeTimer={activeTimer}
-                onToggleTimer={toggleTimer}
-                onOpenDetail={setDetailTaskId}
-                onToggleComplete={handleToggleComplete}
-                onToggleSubtaskComplete={handleToggleSubtaskComplete}
-                onDeleteTask={handleDeleteTask}
-              />
-            </div>
-          )}
-
-          {/* DYNAMIC PROJECTION COLUMNS AND SHUTDOWN VIEW */}
-          {viewMode === 'shutdown' ? (
+          {viewMode === 'projects' ? (
+            <ProjectsView 
+              projects={projects.filter(p => {
+                if (objectiveFilter === 'all') return true;
+                if (objectiveFilter === 'unassigned') return !p.objectiveId;
+                return p.objectiveId === objectiveFilter;
+              })} 
+              allProjects={projects}
+              objectives={objectives} 
+              tasks={tasks}
+              setTasks={setTasks}
+              setProjects={setProjects}
+              setObjectives={setObjectives}
+              createProject={createProject}
+              updateProject={updateProject}
+              deleteProject={deleteProject}
+              createObjective={createObjective}
+              updateObjective={updateObjective}
+              deleteObjective={deleteObjective}
+              reorderProjects={reorderProjects}
+              objectiveFilter={objectiveFilter}
+              onAddTaskClick={setTaskCreatorConfig}
+              onOpenTask={setDetailTaskId}
+              toggleTaskComplete={toggleTaskComplete}
+              deleteTask={deleteTask}
+              detailProjectId={detailProjectId}
+              setDetailProjectId={setDetailProjectId}
+              detailObjectiveId={detailObjectiveId}
+              setDetailObjectiveId={setDetailObjectiveId}
+            />
+          ) : viewMode === 'shutdown' ? (
             <ShutdownView
               dateStr={baseDate}
               tasks={filteredTasks}
@@ -825,6 +923,40 @@ export default function ActionEngine() {
             />
           ) : (
             <>
+              {/* DAILY MODE: INBOX AND NEXT FEW DAYS */}
+              {viewMode === 'daily' && (
+                <div className="w-[350px] flex-shrink-0 flex flex-col gap-4">
+                  <KanbanColumn
+                    id="next_few_days"
+                    title="Next few day"
+                    tasks={filteredTasks.filter(t => isNextFewDays(t.startDate))}
+                    sessions={sessions}
+                    onAddTaskClick={null}
+                    showAdd={false}
+                    activeTimer={activeTimer}
+                    onToggleTimer={toggleTimer}
+                    onOpenDetail={setDetailTaskId}
+                    onToggleComplete={handleToggleComplete}
+                    onToggleSubtaskComplete={handleToggleSubtaskComplete}
+                    onDeleteTask={handleDeleteTask}
+                  />
+                  <KanbanColumn
+                    id="inbox"
+                    title="Inbox"
+                    tasks={filteredTasks.filter(t => !t.startDate)}
+                    sessions={sessions}
+                    onAddTaskClick={setTaskCreatorConfig}
+                    activeTimer={activeTimer}
+                    onToggleTimer={toggleTimer}
+                    onOpenDetail={setDetailTaskId}
+                    onToggleComplete={handleToggleComplete}
+                    onToggleSubtaskComplete={handleToggleSubtaskComplete}
+                    onDeleteTask={handleDeleteTask}
+                  />
+                </div>
+              )}
+
+              {/* DYNAMIC PROJECTION COLUMNS */}
               {(viewMode === 'daily' ? [projectionDays[0]] : projectionDays).map(day => (
                 <KanbanColumn
                   onShutdownClick={handleShutdownClick}
@@ -844,7 +976,7 @@ export default function ActionEngine() {
                 />
               ))}
 
-              {/* CALENDAR (ALWAYS VISIBLE, RIGHT ALIGNED) */}
+              {/* CALENDAR (ALWAYS VISIBLE IN DAILY/MULTI, RIGHT ALIGNED) */}
               <CalendarGrid
                 sessions={sessions}
                 tasks={filteredTasks}
