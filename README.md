@@ -1,112 +1,159 @@
-# CSES Dashboard — Life OS
+# CSES Dashboard
 
-> **Module 2: Action & Productivity Engine** of the Continuous Self-Evolution System (CSES)
+> **Module 2 — Action & Productivity Engine** of the Continuous Self-Evolution System (CSES)
 
----
-
-## What This Project Is
-
-This is the primary web interface for the **Continuous Self-Evolution System (CSES)** — a first-principles, axiom-driven personal operating system built to facilitate a systematic transition from a high-entropy, reactive lifestyle to a low-entropy, self-directed, continuously evolving life.
-
-The CSES Dashboard is **not a generic productivity app**. It is the operational execution layer of a holistic *Life OS* — the place where abstract long-term vectors (Objectives) break down into concrete, trackable work (Projects → Tasks → Pomodoros). Every data entity and UI decision must serve the CSES philosophy.
-
----
-
-## Big Picture: The Life OS Architecture
-
-The full Life OS is organised into 9 interconnected modules. This dashboard is the current primary build focus (Module 2), but all data models are designed with cross-module linkage in mind.
-
-| # | Module | Domain | Status |
-|---|--------|--------|--------|
-| 1 | 🧠 Core Identity & Vision | The "Self" — Values, 1/5/10-year visions | Route: `/identity` |
-| **2** | **⚙️ Action & Productivity Engine** | **Doing — Tasks, Projects, Objectives, Pomodoros** | **Active build (this dashboard)** |
-| 3 | 📚 Second Brain & Knowledge | Thinking — Journal, Zettelkasten, Media logs | Route: `/journal` |
-| 4 | 🧬 Health, Biology & Fitness | Physical — Sleep, Workouts, Biomarkers | Route: `/health` |
-| 5 | 💰 Wealth & Resource Management | Financial — Income, Expenses, Net Worth | Route: `/finance` |
-| 6 | 🤝 Personal CRM & Social | Relationships — Contacts, Interactions | Route: `/crm` |
-| 7 | 🧘 Psychology & Emotion | Mental State — Mood, Energy, Triggers | Route: `/mood` |
-| 8 | 🌍 Environment & Assets | Physical Space — Inventory, Travel | Route: `/environment` |
-| 9 | 🤖 AI Synthesis Engine (Oracle) | Cross-domain AI — Correlations, Auto-scheduling | Route: `/oracle` |
-
----
-
-## The CSES Philosophy (The "Why" Behind Every Feature)
-
-The system is built on **5 Core Axioms** from [`SELF_EVOLUTION_SYSTEM.md`](../SELF_EVOLUTION_SYSTEM.md):
-
-1. **Vector Anchoring** — All work must trace back to a long-term, environment-independent goal function. This is why every task optionally links to a Project, and every Project optionally links to an Objective.
-2. **Boundary Metabolism** — High signal-to-noise environments only. The UI is intentionally distraction-free; no notifications, no news feeds.
-3. **Antifragile Refactoring** — Failures and blockers are data, not errors. The shutdown/review views support this.
-4. **Endogenous Actuation (MVAU)** — The Pomodoro/session timer enforces *Minimal Action Units*: the smallest possible unit of work that produces a real deliverable.
-5. **Negative Entropy Calibration** — The Error Delta between planned and actual work is tracked. The daily shutdown ritual surfaces this discrepancy so the user can correct course.
-
----
-
-## Data Hierarchy (Goal-to-Action Pipeline)
-
-```
-Objective  (The "Why")
-  └── Project  (The "What" — a bounded deliverable)
-        └── Task  (The "How" — atomic next action)
-              └── Subtask  (Optional further decomposition)
-                    └── Session  (Tracked Pomodoro time block)
-```
-
-- **Objectives** are the user's long-range vectors (e.g., "Complete PhD Thesis", "Build SaaS").
-- **Projects** are bounded initiatives with a start/end date and status lifecycle: `BACKLOG → PLANNING → IN_PROGRESS → PAUSED → COMPLETED`.
-- **Tasks** are the atomic next actions. They can be scheduled to a date, assigned to a project, and have time tracked via Sessions.
-- **Sessions** are calendar time blocks. Each session is draggable on the daily calendar.
+A personal life-OS dashboard for systematic, axiom-driven self-improvement. The dashboard turns long-range goals (Objectives) into traceable, time-tracked daily work through a structured `Objective → Project → Task → Session` pipeline.
 
 ---
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|---|---|
 | Framework | Next.js 16 (App Router, Turbopack) |
-| Styling | Vanilla CSS + Tailwind utility classes |
-| Database ORM | Prisma (SQLite for dev, PostgreSQL-ready) |
+| Styling | Tailwind CSS v4 + CSS custom properties |
+| Database ORM | Prisma 5 (SQLite for dev, PostgreSQL-ready) |
+| Rich Text | Tiptap v3 (markdown-aware editor) |
 | Drag & Drop | `@dnd-kit/core` + `@dnd-kit/sortable` |
+| Charts | Recharts |
 | State | React `useState` / `useEffect` / Server Actions |
 
 ---
 
-## Running Locally
+## Getting Started
 
 ```bash
-# From the cses-dashboard directory
+# 1. Install dependencies
+npm install
+
+# 2. Set up the database (first run only)
+npx prisma migrate dev
+npx prisma generate
+
+# 3. Start the dev server
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-**Database setup (first time):**
-```bash
-npx prisma migrate dev
-npx prisma generate
+### Environment Variables
+
+Copy `.env` and set the database URL if switching from SQLite to PostgreSQL:
+
+```
+DATABASE_URL="file:./prisma/dev.db"
 ```
 
 ---
 
-## Current Feature Set (Action Engine — `/actions`)
+## Project Structure
 
-- **Daily Planning View** — Kanban-style task board (Today / Inbox / Next Few Days / Backlog) with a draggable calendar for time-blocking sessions
+```
+cses-dashboard/
+├── prisma/
+│   ├── schema.prisma          ← Data models (Task, Project, Objective, Session)
+│   └── dev.db                 ← SQLite development database
+│
+├── src/
+│   ├── app/
+│   │   ├── layout.js          ← Root layout (font, global CSS)
+│   │   ├── globals.css        ← CSS custom properties & base styles
+│   │   ├── page.js            ← Home / sidebar navigation shell
+│   │   │
+│   │   ├── actions/
+│   │   │   ├── page.js        ← Action Engine UI (main task/planning view)
+│   │   │   └── serverActions.js ← All Prisma DB mutations (Server Actions)
+│   │   │
+│   │   ├── identity/          ← Module 1: Core Values & Vision
+│   │   ├── journal/           ← Module 3: Second Brain / Daily Journal
+│   │   ├── health/            ← Module 4: Biomarkers, Sleep, Workouts
+│   │   ├── finance/           ← Module 5: Wealth & Resource tracking
+│   │   ├── crm/               ← Module 6: Personal CRM
+│   │   ├── mood/              ← Module 7: Emotion & Psychology
+│   │   ├── environment/       ← Module 8: Inventory & Physical Space
+│   │   ├── oracle/            ← Module 9: AI Synthesis Engine
+│   │   ├── settings/          ← App-level settings
+│   │   └── api/               ← API routes (if any REST endpoints are needed)
+│   │
+│   ├── components/
+│   │   ├── ShutdownView.js    ← End-of-day review ritual (pie chart, task recap)
+│   │   ├── ProjectsView.js    ← Projects Kanban + Project/Objective detail modals
+│   │   ├── TaskCreatorModal.js ← Quick-create modal for new tasks
+│   │   ├── ProjectCreatorModal.js ← Quick-create modal for new projects
+│   │   ├── SortableTask.js    ← Draggable task row in Kanban columns
+│   │   ├── KanbanColumn.js    ← Kanban column wrapper
+│   │   ├── CalendarGrid.js    ← Daily time-blocking calendar
+│   │   ├── DraggableSession.js ← Draggable session block on calendar
+│   │   ├── TaskNotes.js       ← Tiptap rich-text notes inside detail modals
+│   │   ├── Sidebar.js         ← Global navigation sidebar
+│   │   ├── DateSelectorDropdown.js
+│   │   ├── FilterDropdown.js
+│   │   ├── MoreActionsDropdown.js
+│   │   └── CurrentTimeLine.js ← Live "current time" indicator on calendar
+│   │
+│   └── lib/
+│       ├── prisma.js          ← Prisma client singleton
+│       └── utils.js           ← Shared helpers (date formatting, time utils)
+│
+├── public/                    ← Static assets
+├── AGENTS.md                  ← AI coding guide & architecture rules
+├── CLAUDE.md                  ← Claude-specific agent hints
+├── eslint.config.mjs
+├── jsconfig.json
+├── next.config.mjs
+├── package.json
+└── postcss.config.mjs
+```
+
+---
+
+## Data Model
+
+```
+Objective  (The "Why" — long-range goal vector)
+  └── Project  (The "What" — bounded deliverable)
+        └── Task  (The "How" — atomic next action)
+              └── Subtask  (Optional decomposition via parentTaskId)
+                    └── Session  (Tracked Pomodoro / time block)
+```
+
+### Key Schema Fields
+
+| Model | Key Fields |
+|---|---|
+| `Task` | `title`, `status`, `tag`, `priority`, `startDate`, `plannedDurationMinutes`, `actualDurationSeconds`, `isCompleted`, `projectId`, `parentTaskId` |
+| `Session` | `taskId`, `startMinutes`, `date` |
+| `Project` | `title`, `status` (`BACKLOG→COMPLETED`), `objectiveId`, `parentProjectId`, `startDate`, `endDate` |
+| `Objective` | `title`, `description` |
+
+---
+
+## Features (Action Engine — `/actions`)
+
+- **Daily Planning View** — Kanban board (Today / Inbox / Next Few Days / Backlog) with drag-and-drop task reordering
+- **Time-Blocking Calendar** — Draggable session blocks on a daily calendar grid
 - **Multi-Day Projection** — Visualise tasks across upcoming days
-- **Projects View** — Kanban board for Projects across 5 status columns; supports parent/subproject hierarchy
-- **Objective, Project & Task Modals** — Full detail panes with breadcrumb hierarchy navigation, editable fields, description notes, and progress tracking
+- **Projects View** — Kanban board across 5 status columns; supports parent/subproject hierarchy
+- **Detail Modals** — Full panes for Objective, Project, and Task with breadcrumb navigation, editable fields, and nested child lists
 - **Pomodoro / Session Timer** — Per-task and per-subtask time tracking; sessions persist to DB
-- **Shutdown View** — End-of-day review ritual aligned with CSES negative-entropy audit protocol
-- **Focus Mode** — Distraction-free full-screen detail view for deep work
+- **Shutdown View** — End-of-day review: time-spent pie chart, worked-on vs missed task lists, actual vs planned comparison bar
+- **Focus Mode** — Distraction-free full-screen deep-work view
 
 ---
 
-## Workspace Context
+## Available Scripts
 
-This dashboard lives inside the broader CSES workspace at:
-```
-C:\Users\30313357\OneDrive\Self_Improvement\
-  ├── SELF_EVOLUTION_SYSTEM.md   ← The axiom framework
-  ├── LIFE_OS_BLUEPRINT.md       ← The 9-module blueprint
-  ├── AI_CONTEXT.md              ← AI agent persistent memory
-  └── cses-dashboard\            ← This application
-```
+| Command | Description |
+|---|---|
+| `npm run dev` | Start development server (Turbopack) |
+| `npm run build` | Build production bundle |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npx prisma studio` | Open Prisma DB GUI |
+| `npx prisma migrate dev` | Apply schema migrations |
+
+---
+
+## Agent / AI Coding Guide
+
+See [AGENTS.md](./AGENTS.md) for architecture rules, state management conventions, Server Action patterns, and a full list of what **not** to do.
