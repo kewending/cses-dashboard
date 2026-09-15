@@ -4,6 +4,36 @@ import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } 
 import { CSS } from '@dnd-kit/utilities';
 import TaskNotes from './TaskNotes';
 import ProjectCreatorModal from './ProjectCreatorModal';
+import { formatActualTime, formatMins } from '@/lib/utils';
+
+/**
+ * Aggregates time for a project.
+ * - Leaf project (no sub-projects): sums its own direct tasks' time only (main task, not subtasks per spec).
+ * - Parent project: sums direct sub-projects' tasks' time (2-level deep only per spec).
+ * Returns { actualSeconds, plannedMinutes }
+ */
+function calcProjectTime(projectId, allProjects, allTasks) {
+  const directSubs = allProjects.filter(p => p.parentProjectId === projectId);
+
+  if (directSubs.length > 0) {
+    // Parent project: aggregate from each sub-project's direct tasks
+    return directSubs.reduce((acc, sub) => {
+      const subTasks = allTasks.filter(t => t.projectId === sub.id);
+      subTasks.forEach(t => {
+        acc.actualSeconds += (t.actualDurationSeconds || 0);
+        acc.plannedMinutes += (t.plannedDurationMinutes || 0);
+      });
+      return acc;
+    }, { actualSeconds: 0, plannedMinutes: 0 });
+  } else {
+    // Leaf project: sum own direct tasks only
+    const directTasks = allTasks.filter(t => t.projectId === projectId);
+    return directTasks.reduce((acc, t) => ({
+      actualSeconds: acc.actualSeconds + (t.actualDurationSeconds || 0),
+      plannedMinutes: acc.plannedMinutes + (t.plannedDurationMinutes || 0),
+    }), { actualSeconds: 0, plannedMinutes: 0 });
+  }
+}
 
 const STATUSES = ['BACKLOG', 'PLANNING', 'IN_PROGRESS', 'PAUSED', 'COMPLETED'];
 const STATUS_LABELS = {
@@ -338,6 +368,46 @@ export default function ProjectsView({
           </div>
         </div>
 
+        {/* Time Summary — aggregated from tasks (and sub-project tasks for parent projects) */}
+        {(() => {
+          const { actualSeconds, plannedMinutes } = calcProjectTime(detailProject.id, projects, tasks);
+          const hasAny = actualSeconds > 0 || plannedMinutes > 0;
+          if (!hasAny) return null;
+          const efficiencyPct = plannedMinutes > 0
+            ? Math.round((actualSeconds / (plannedMinutes * 60)) * 100)
+            : null;
+          return (
+            <div className="flex items-center gap-5 mt-3 mb-1 px-1 py-2.5 bg-gray-50 border border-gray-100 rounded-xl">
+              <div className="flex flex-col items-center flex-1">
+                <span className="text-[9px] uppercase tracking-widest text-gray-400 mb-0.5">Time Spent</span>
+                <span className={`text-sm font-mono font-semibold ${actualSeconds > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                  {actualSeconds > 0 ? formatActualTime(actualSeconds) : '--'}
+                </span>
+              </div>
+              <div className="w-px h-6 bg-gray-200" />
+              <div className="flex flex-col items-center flex-1">
+                <span className="text-[9px] uppercase tracking-widest text-gray-400 mb-0.5">Estimated</span>
+                <span className="text-sm font-mono font-semibold text-gray-500">
+                  {formatMins(plannedMinutes)}
+                </span>
+              </div>
+              {efficiencyPct !== null && actualSeconds > 0 && (
+                <>
+                  <div className="w-px h-6 bg-gray-200" />
+                  <div className="flex flex-col items-center flex-1">
+                    <span className="text-[9px] uppercase tracking-widest text-gray-400 mb-0.5">Used</span>
+                    <span className={`text-sm font-mono font-semibold ${
+                      efficiencyPct <= 100 ? 'text-green-600' : 'text-orange-500'
+                    }`}>
+                      {efficiencyPct}%
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Breadcrumb */}
         {(detailProjectObjective || detailProjectParent) && (
           <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 mt-2 mb-[-1.5rem] px-1">
@@ -462,7 +532,15 @@ export default function ProjectsView({
                         <button
                           onClick={async () => {
                             const newVal = !task.isCompleted;
-                            // Cascade to subtasks
+
+                            // Auto-fill actual time when completing a task that has 0 actual time
+                            if (newVal && (task.actualDurationSeconds || 0) === 0 && (task.plannedDurationMinutes || 0) > 0) {
+                              const filled = task.plannedDurationMinutes * 60;
+                              setTasks(prev => prev.map(t => t.id === task.id ? { ...t, actualDurationSeconds: filled } : t));
+                              updateTask(task.id, { actualDurationSeconds: filled }); // fire-and-forget
+                            }
+
+                            // Cascade completion to subtasks
                             setTasks(prev => prev.map(t => {
                               if (t.id !== task.id) return t;
                               return {

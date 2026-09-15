@@ -82,6 +82,7 @@ import TaskCreatorModal from '@/components/TaskCreatorModal';
 import ShutdownView from '@/components/ShutdownView';
 import KanbanColumn from '@/components/KanbanColumn';
 import ProjectsView from '@/components/ProjectsView';
+import GanttView from '@/components/GanttView';
 import { HOURS, DAYS_OF_WEEK, formatRelativeDate, formatAbsoluteDate, getProjectionDays, formatActualTime, formatMins, formatSessionTime, isNextFewDays } from '@/lib/utils';
 
 function SortableSubtaskItem({ sub, detailTaskId, activeTimer, onToggleSubtaskComplete, onToggleTimer, updateTask, setTasks, deleteTask }) {
@@ -309,18 +310,29 @@ export default function ActionEngine() {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
     const newIsCompleted = !task.isCompleted;
+
+    // Auto-fill actual time when completing a task that has 0 actual time tracked
+    // (preserves real tracked time — only fills when actual is still 0)
+    let actualUpdate = {};
+    if (newIsCompleted && (task.actualDurationSeconds || 0) === 0 && (task.plannedDurationMinutes || 0) > 0) {
+      actualUpdate = { actualDurationSeconds: task.plannedDurationMinutes * 60 };
+      updateTask(taskId, actualUpdate); // fire-and-forget DB write
+    }
+
     await toggleTaskComplete(taskId, newIsCompleted);
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         return {
           ...t,
           isCompleted: newIsCompleted,
+          ...actualUpdate,
           subtasks: t.subtasks ? t.subtasks.map(s => ({ ...s, isCompleted: newIsCompleted })) : []
         };
       }
       return t;
     }));
   };
+
 
   const handleToggleSubtaskComplete = async (taskId, subtaskId) => {
     const task = tasks.find(t => t.id === taskId);
@@ -801,7 +813,7 @@ export default function ActionEngine() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-shrink-0">
         <div className="flex items-center gap-3">
-          {viewMode !== 'projects' && (
+          {viewMode !== 'projects' && viewMode !== 'gantt' && (
             <DateSelectorDropdown baseDate={baseDate} setBaseDate={setBaseDate} />
           )}
           
@@ -838,7 +850,7 @@ export default function ActionEngine() {
                 </div>
               </div>
             </div>
-          ) : (
+          ) : viewMode === 'gantt' ? null : (
             <FilterDropdown taskFilter={taskFilter} setTaskFilter={setTaskFilter} allTags={allTags} />
           )}
         </div>
@@ -861,6 +873,12 @@ export default function ActionEngine() {
           >
             Projects
           </button>
+          <button
+            onClick={() => setViewMode('gantt')}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${viewMode === 'gantt' ? 'bg-[var(--color-accent)] text-white' : 'text-[var(--color-text-muted)] hover:text-white'}`}
+          >
+            Timeline
+          </button>
         </div>
       </div>
 
@@ -878,7 +896,20 @@ export default function ActionEngine() {
       <DndContext id="action-dnd" sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex-1 flex gap-4 min-h-0 overflow-x-auto pb-4">
 
-          {viewMode === 'projects' ? (
+          {viewMode === 'gantt' ? (
+            <GanttView
+              objectives={objectives}
+              projects={projects}
+              tasks={tasks}
+              updateProject={updateProject}
+              updateTask={updateTask}
+              setProjects={setProjects}
+              setTasks={setTasks}
+              onOpenTask={setDetailTaskId}
+              onOpenProject={(id) => { setDetailProjectId(id); setViewMode('projects'); }}
+              onOpenObjective={(id) => { setDetailObjectiveId(id); setViewMode('projects'); }}
+            />
+          ) : viewMode === 'projects' ? (
             <ProjectsView 
               projects={projects.filter(p => {
                 if (objectiveFilter === 'all') return true;
