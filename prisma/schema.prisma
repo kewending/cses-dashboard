@@ -74,3 +74,75 @@ model Project {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 }
+
+// ─── CRM Module ───────────────────────────────────────────────────────────────
+
+model Contact {
+  id                 String   @id @default(cuid())
+  avatarUrl          String?
+  fullName           String
+  chineseName        String?
+  displayName        String?
+  tier               Int      @default(3)    // 0=核心, 1=重要, 2=关注, 3=普通
+  status             String   @default("active") // active | archived
+  gender             String?                 // male | female | other | prefer_not_to_say
+  birthday           String?                 // YYYY-MM-DD
+  city               String?
+  nation             String?                 // Country name
+  occupation         String?                 // Job title / field
+  relationshipStatus String?                 // single | married | in_relationship | divorced | widowed | prefer_not_to_say
+  tags               String?                 // JSON array stored as string: ["education","work",...]
+  notes              String?                 // Markdown text notes
+
+  contactMethods    ContactMethod[]
+  backgroundHistory BackgroundHistory[]
+  interactions      Interaction[]
+  relatedTo         ContactRelation[]  @relation("RelationFrom")
+  relatedFrom       ContactRelation[]  @relation("RelationTo")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ContactMethod {
+  id        String  @id @default(cuid())
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type      String  // email | phone | wechat | linkedin | twitter | github | scholar | other
+  label     String? // 工作 | 私人 | etc.
+  value     String
+}
+
+model BackgroundHistory {
+  id           String  @id @default(cuid())
+  contactId    String
+  contact      Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  category     String  // work | education
+  organization String
+  titleOrMajor String?
+  startDate    String? // YYYY or YYYY-MM
+  endDate      String? // YYYY, YYYY-MM, or "present"
+  description  String?
+}
+
+model Interaction {
+  id           String   @id @default(cuid())
+  contactId    String
+  contact      Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  date         String   // YYYY-MM-DD
+  type         String?  // meeting | call | email | event | other
+  summary      String
+  sourceModule String   @default("manual") // manual | journal (future hook)
+  createdAt    DateTime @default(now())
+}
+
+model ContactRelation {
+  id     String  @id @default(cuid())
+  fromId String
+  toId   String
+  label  String? // 同学 | 同事 | 前老板 | etc.
+  from   Contact @relation("RelationFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to     Contact @relation("RelationTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
+}
