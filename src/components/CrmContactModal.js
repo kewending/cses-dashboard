@@ -40,7 +40,7 @@ export default function CrmContactModal({ onClose, onCreated, initialData }) {
 
   // Parse existing tags from JSON string
   const parsedInitialTags = (() => {
-    try { return initialData?.tags ? JSON.parse(initialData.tags) : []; }
+    try { const parsed = initialData?.tags ? JSON.parse(initialData.tags) : []; return Array.isArray(parsed) ? parsed : []; }
     catch { return []; }
   })();
 

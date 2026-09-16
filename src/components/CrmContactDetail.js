@@ -535,7 +535,7 @@ export default function CrmContactDetail({ initialContact }) {
 
               {/* Tags */}
               {(() => {
-                const tags = (() => { try { return contact.tags ? JSON.parse(contact.tags) : []; } catch { return []; } })();
+                const tags = (() => { try { const parsed = contact.tags ? JSON.parse(contact.tags) : []; return Array.isArray(parsed) ? parsed : []; } catch { return []; } })();
                 return tags.length > 0 ? (
                   <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
                     <div style={{ fontSize: 11, color: '#666677', marginBottom: 8 }}>🏷️ Tags</div>
