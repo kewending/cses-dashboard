@@ -456,8 +456,7 @@ export default function GanttView({
     barElRef.current = null;
 
     if (!didDrag) {
-      // Pure click → restore DOM (no change) then open modal
-      if (barEl) { barEl.style.left = ''; barEl.style.width = ''; }
+      // Pure click → open modal
       if (row.type === 'task') {
         onOpenTask?.(row.id);
       } else if (!row.isVirtual) {
@@ -504,15 +503,9 @@ export default function GanttView({
       }
     }
 
-    // Reset DOM mutations — React state now drives position
-    // Use rAF so the reset happens AFTER React has committed the new state
-    // (avoids the "flicker back then snap" visual glitch)
-    if (barEl) {
-      requestAnimationFrame(() => {
-        barEl.style.left  = '';
-        barEl.style.width = '';
-      });
-    }
+    // We do not manually clear barEl.style.left/width here.
+    // React's re-render will automatically overwrite the inline styles 
+    // with the newly calculated positions.
   }, [onOpenTask, objectives, projects, setTasks, setProjects, updateTask, updateProject]);
 
   const toggleCollapse = (id) =>
