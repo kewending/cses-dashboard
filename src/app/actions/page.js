@@ -80,6 +80,8 @@ import CurrentTimeLine from '@/components/CurrentTimeLine';
 import CalendarGrid from '@/components/CalendarGrid';
 import TaskCreatorModal from '@/components/TaskCreatorModal';
 import TaskDetailModal from '@/components/TaskDetailModal';
+import ProjectDetailModal from '@/components/ProjectDetailModal';
+import ObjectiveDetailModal from '@/components/ObjectiveDetailModal';
 import ShutdownView from '@/components/ShutdownView';
 import KanbanColumn from '@/components/KanbanColumn';
 import ProjectsView from '@/components/ProjectsView';
@@ -557,8 +559,8 @@ export default function ActionEngine() {
               setProjects={setProjects}
               setTasks={setTasks}
               onOpenTask={setDetailTaskId}
-              onOpenProject={(id) => { setDetailProjectId(id); setViewMode('projects'); }}
-              onOpenObjective={(id) => { setDetailObjectiveId(id); setViewMode('projects'); }}
+              onOpenProject={(id) => { setDetailProjectId(id); }}
+              onOpenObjective={(id) => { setDetailObjectiveId(id); }}
             />
           ) : viewMode === 'projects' ? (
             <ProjectsView 
@@ -710,6 +712,57 @@ export default function ActionEngine() {
         reorderSubtasks={reorderSubtasks}
         onClose={() => setDetailTaskId(null)}
       />
+
+      {/* PROJECT DETAIL OVERLAY */}
+      {detailProjectId && (
+        <ProjectDetailModal
+          projectId={detailProjectId}
+          projects={projects}
+          tasks={tasks}
+          objectives={objectives}
+          setProjects={setProjects}
+          updateProject={updateProject}
+          setTasks={setTasks}
+          updateTask={updateTask}
+          toggleTaskComplete={toggleTaskComplete}
+          deleteTask={deleteTask}
+          handleDeleteProject={(id) => {
+            setProjects(prev => prev.filter(p => p.id !== id));
+            deleteProject(id);
+            setDetailProjectId(null);
+          }}
+          createProject={createProject}
+          onOpenTask={setDetailTaskId}
+          onAddTaskClick={() => {
+             // Not supported easily without global TaskCreator config
+          }}
+          setDetailObjectiveId={setDetailObjectiveId}
+          setDetailProjectId={setDetailProjectId}
+          onClose={() => setDetailProjectId(null)}
+        />
+      )}
+
+      {/* OBJECTIVE DETAIL OVERLAY */}
+      {detailObjectiveId && (
+        <ObjectiveDetailModal
+          objectiveId={detailObjectiveId}
+          objectives={objectives}
+          projects={projects}
+          setObjectives={setObjectives}
+          updateObjective={updateObjective}
+          setProjects={setProjects}
+          createProject={createProject}
+          handleDeleteObjective={(id) => {
+            setObjectives(prev => prev.filter(o => o.id !== id));
+            setProjects(prev => prev.map(p => p.objectiveId === id ? { ...p, objectiveId: null } : p));
+            deleteObjective(id);
+            setDetailObjectiveId(null);
+          }}
+          setDetailProjectId={setDetailProjectId}
+          setDetailObjectiveId={setDetailObjectiveId}
+          onClose={() => setDetailObjectiveId(null)}
+        />
+      )}
 
     </div>
   );

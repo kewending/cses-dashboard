@@ -159,70 +159,6 @@ function buildRows(objectives, projects, tasks, collapsed) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Inline detail modal rendered OVER the timeline (no navigation)
 // ─────────────────────────────────────────────────────────────────────────────
-function InlineModal({ title, icon, children, onClose }) {
-  return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backgroundColor: 'var(--color-glass-bg)', backdropFilter: 'blur(4px)',
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: D.modalBg,
-          border: `1px solid ${D.modalBorder}`,
-          borderRadius: 16,
-          width: '100%', maxWidth: 560,
-          maxHeight: '80vh',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
-          display: 'flex', flexDirection: 'column',
-          overflow: 'hidden',
-          animation: 'gantt-modal-in 0.18s ease',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '20px 24px 16px',
-          borderBottom: `1px solid ${D.border}`,
-          flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 20 }}>{icon}</span>
-          <span style={{
-            fontSize: 18, fontWeight: 700, color: D.textPrimary,
-            flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{title}</span>
-          <button
-            onClick={onClose}
-            style={{
-              width: 28, height: 28, borderRadius: 8,
-              background: 'var(--color-glass-bg)', border: 'none',
-              color: D.textMuted, cursor: 'pointer', fontSize: 16,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-bg-panel-hover)'; e.currentTarget.style.color = D.textPrimary; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-glass-bg)'; e.currentTarget.style.color = D.textMuted; }}
-          >✕</button>
-        </div>
-        {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 24px' }}>
-          {children}
-        </div>
-      </div>
-      <style>{`
-        @keyframes gantt-modal-in {
-          from { opacity: 0; transform: scale(0.94) translateY(10px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-      `}</style>
-    </div>
-  );
-}
-
 function InfoRow({ label, value }) {
   if (!value) return null;
   return (
@@ -268,7 +204,7 @@ export default function GanttView({
 
   // Inline modals — no navigation away
   const [modalProject,   setModalProject]   = useState(null); // project/subproject object
-  const [modalObjective, setModalObjective] = useState(null); // objective object
+   // objective object
 
   const scrollRef = useRef(null);   // single scroll container
   const dragRef   = useRef(null);   // active bar-drag state
@@ -462,10 +398,10 @@ export default function GanttView({
       } else if (!row.isVirtual) {
         if (row.type === 'objective') {
           const obj = objectives.find(o => o.id === row.id);
-          if (obj) setModalObjective(obj);
+          if (obj) onOpenObjective?.(obj.id);
         } else {
           const proj = projects.find(p => p.id === row.id);
-          if (proj) setModalProject(proj);
+          if (proj) onOpenProject?.(proj.id);
         }
       }
       return;
@@ -748,10 +684,10 @@ export default function GanttView({
                           onOpenTask?.(row.id);
                         } else if (row.type === 'objective' && !row.isVirtual) {
                           const obj = objectives.find(o => o.id === row.id);
-                          if (obj) setModalObjective(obj);
+                          if (obj) onOpenObjective?.(obj.id);
                         } else if ((row.type === 'project' || row.type === 'subproject') && !row.isVirtual) {
                           const proj = projects.find(p => p.id === row.id);
-                          if (proj) setModalProject(proj);
+                          if (proj) onOpenProject?.(proj.id);
                         }
                       }}
                       style={{
@@ -926,153 +862,6 @@ export default function GanttView({
       </div>
       {/* ── END SCROLL CONTAINER ── */}
 
-      {/* ══════════ INLINE PROJECT MODAL ══════════ */}
-      {modalProject && (
-        <InlineModal
-          title={modalProject.title}
-          icon={modalProject.parentProjectId ? '≡' : '📁'}
-          onClose={() => setModalProject(null)}
-        >
-          <InfoRow label="Status"    value={modalProject.status} />
-          <InfoRow label="Start"     value={modalProject.startDate} />
-          <InfoRow label="End"       value={modalProject.endDate} />
-          <InfoRow label="Notes"     value={modalProject.description || modalProject.notes} />
-          {/* Quick-edit dates */}
-          <div style={{ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 11, color: D.textFaint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Start date</label>
-              <input
-                type="date"
-                defaultValue={modalProject.startDate || ''}
-                style={{
-                  background: 'rgba(255,255,255,0.06)', border: `1px solid ${D.border}`,
-                  borderRadius: 8, padding: '6px 10px', color: D.textSecond,
-                  fontSize: 13, outline: 'none', cursor: 'pointer',
-                }}
-                onChange={e => {
-                  const val = e.target.value || null;
-                  setProjects(prev => prev.map(p => p.id === modalProject.id ? { ...p, startDate: val } : p));
-                  updateProject(modalProject.id, { startDate: val });
-                  setModalProject(prev => ({ ...prev, startDate: val }));
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 11, color: D.textFaint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>End date</label>
-              <input
-                type="date"
-                defaultValue={modalProject.endDate || ''}
-                style={{
-                  background: 'rgba(255,255,255,0.06)', border: `1px solid ${D.border}`,
-                  borderRadius: 8, padding: '6px 10px', color: D.textSecond,
-                  fontSize: 13, outline: 'none', cursor: 'pointer',
-                }}
-                onChange={e => {
-                  const val = e.target.value || null;
-                  setProjects(prev => prev.map(p => p.id === modalProject.id ? { ...p, endDate: val } : p));
-                  updateProject(modalProject.id, { endDate: val });
-                  setModalProject(prev => ({ ...prev, endDate: val }));
-                }}
-              />
-            </div>
           </div>
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${D.border}`, display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => {
-                setModalProject(null);
-                onOpenProject?.(modalProject.id); // fall back to full editor if parent wants to
-              }}
-              style={{
-                padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                background: 'rgba(99,102,241,0.18)', border: `1px solid rgba(99,102,241,0.4)`,
-                color: '#a5b4fc', cursor: 'pointer', transition: 'all 0.15s',
-              }}
-            >
-              Open full details →
-            </button>
-            <button
-              onClick={() => setModalProject(null)}
-              style={{
-                padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                background: 'transparent', border: `1px solid ${D.border}`,
-                color: D.textMuted, cursor: 'pointer',
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </InlineModal>
-      )}
-
-      {/* ══════════ INLINE OBJECTIVE MODAL ══════════ */}
-      {modalObjective && (
-        <InlineModal
-          title={modalObjective.title}
-          icon="🎯"
-          onClose={() => setModalObjective(null)}
-        >
-          <InfoRow label="Notes" value={modalObjective.description || modalObjective.notes} />
-          {/* Projects under this objective */}
-          {(() => {
-            const objProjects = projects.filter(p => p.objectiveId === modalObjective.id && !p.parentProjectId);
-            if (!objProjects.length) return <p style={{ fontSize: 13, color: D.textFaint, marginTop: 8 }}>No projects assigned.</p>;
-            return (
-              <div style={{ marginTop: 8 }}>
-                <p style={{ fontSize: 11, color: D.textFaint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Projects ({objProjects.length})</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {objProjects.map(p => (
-                    <div
-                      key={p.id}
-                      onClick={() => { setModalObjective(null); setModalProject(p); }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        padding: '8px 12px', borderRadius: 8,
-                        background: 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${D.borderSub}`,
-                        cursor: 'pointer', transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--color-glass-bg)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                    >
-                      <span style={{ fontSize: 14 }}>📁</span>
-                      <span style={{ fontSize: 13, color: D.textSecond }}>{p.title}</span>
-                      {p.startDate && (
-                        <span style={{ marginLeft: 'auto', fontSize: 11, color: D.textFaint }}>{p.startDate}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${D.border}`, display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => {
-                setModalObjective(null);
-                onOpenObjective?.(modalObjective.id);
-              }}
-              style={{
-                padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                background: 'rgba(99,102,241,0.18)', border: `1px solid rgba(99,102,241,0.4)`,
-                color: '#a5b4fc', cursor: 'pointer', transition: 'all 0.15s',
-              }}
-            >
-              Open full details →
-            </button>
-            <button
-              onClick={() => setModalObjective(null)}
-              style={{
-                padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                background: 'transparent', border: `1px solid ${D.border}`,
-                color: D.textMuted, cursor: 'pointer',
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </InlineModal>
-      )}
-
-    </div>
   );
 }
