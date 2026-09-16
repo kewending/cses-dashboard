@@ -11,6 +11,21 @@
   --color-text-muted: #888899;
 }
 
+:root {
+  color-scheme: dark;
+}
+
+select {
+  background-color: var(--color-bg-dark) !important;
+  color: var(--color-text-main) !important;
+}
+
+select option {
+  background-color: #1a1a24;
+  color: #f0f0f0;
+  padding: 8px;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background-color: var(--color-bg-dark);

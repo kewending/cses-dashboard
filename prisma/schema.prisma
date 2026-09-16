@@ -146,3 +146,66 @@ model ContactRelation {
 
   @@unique([fromId, toId])
 }
+
+// ─── Finance Module ───────────────────────────────────────────────────────────
+
+model FinanceAccount {
+  id             String               @id @default(cuid())
+  name           String
+  type           String               // CHECKING | SAVINGS | INVESTMENT | CREDIT | LOAN | PHYSICAL_ASSET
+  currency       String               // ISO 4217, e.g., AUD, USD, CNY
+  initialBalance Float                @default(0)
+  currentBalance Float                @default(0)
+  isLiability    Boolean              @default(false)
+
+  transactions   FinanceTransaction[] @relation("AccountTransactions")
+  transfersIn    FinanceTransaction[] @relation("TransferDestination")
+
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+}
+
+model FinanceCategory {
+  id           String               @id @default(cuid())
+  name         String
+  type         String               // EXPENSE | INCOME
+  color        String?              // Hex code or tag token
+  
+  transactions FinanceTransaction[]
+
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model FinanceTransaction {
+  id                   String           @id @default(cuid())
+  
+  accountId            String
+  account              FinanceAccount   @relation("AccountTransactions", fields: [accountId], references: [id], onDelete: Cascade)
+  
+  date                 DateTime
+  amount               Float            // Always positive
+  type                 String           // INCOME | EXPENSE | TRANSFER
+  exchangeRate         Float?           // Custom transfer ratio for cross-currency transfers
+  
+  destinationAccountId String?
+  destinationAccount   FinanceAccount?  @relation("TransferDestination", fields: [destinationAccountId], references: [id])
+  
+  categoryId           String?
+  category             FinanceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  
+  note                 String?
+
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+}
+
+model ExchangeRate {
+  id             String   @id @default(cuid())
+  sourceCurrency String
+  targetCurrency String
+  rate           Float
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  @@unique([sourceCurrency, targetCurrency])
+}
