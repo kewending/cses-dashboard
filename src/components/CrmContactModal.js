@@ -2,13 +2,7 @@
 
 import { useState } from 'react';
 import { createContact, updateContact } from '@/app/crm/serverActions';
-
-const TIER_CONFIG = {
-  0: { label: 'T0 · Core', color: '#ff3366' },
-  1: { label: 'T1 · Key', color: '#ff8c42' },
-  2: { label: 'T2 · Network', color: '#4ecdc4' },
-  3: { label: 'T3 · Contact', color: '#888899' },
-};
+import { useSettings } from '../lib/SettingsContext';
 
 const GENDER_OPTIONS = [
   { value: '', label: '— Not specified —' },
@@ -36,6 +30,7 @@ const TAG_SUGGESTIONS = [
 ];
 
 export default function CrmContactModal({ onClose, onCreated, initialData }) {
+  const { settings: { crmTiers } } = useSettings();
   const isEdit = !!initialData;
 
   // Parse existing tags from JSON string
@@ -108,7 +103,7 @@ export default function CrmContactModal({ onClose, onCreated, initialData }) {
       }}
     >
       <div style={{
-        background: '#14141e', border: '1px solid rgba(255,255,255,0.1)',
+        background: '#14141e', border: '1px solid var(--color-border)',
         borderRadius: 20, padding: 32, width: '100%', maxWidth: 560,
         boxShadow: '0 40px 80px rgba(0,0,0,0.6)',
         animation: 'slideUp 0.2s ease', margin: 'auto',
@@ -116,10 +111,10 @@ export default function CrmContactModal({ onClose, onCreated, initialData }) {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#f0f0f0' }}>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--color-text-main)' }}>
               {isEdit ? 'Edit Contact' : 'New Contact'}
             </h2>
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#888899' }}>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--color-text-muted)' }}>
               {isEdit ? 'Update contact information' : 'Add someone to your network'}
             </p>
           </div>
@@ -133,7 +128,7 @@ export default function CrmContactModal({ onClose, onCreated, initialData }) {
             <FieldLabel>Tier / Circle</FieldLabel>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               {[0, 1, 2, 3].map(t => {
-                const cfg = TIER_CONFIG[t];
+                const cfg = crmTiers[t];
                 const active = form.tier === t;
                 return (
                   <button key={t} onClick={() => set('tier', t)} style={{
@@ -199,10 +194,10 @@ export default function CrmContactModal({ onClose, onCreated, initialData }) {
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   padding: '2px 8px', borderRadius: 20,
                   background: 'rgba(255,51,102,0.15)', border: '1px solid rgba(255,51,102,0.3)',
-                  color: '#ff6688', fontSize: 11, fontWeight: 600,
+                  color: 'var(--color-accent)', fontSize: 11, fontWeight: 600,
                 }}>
                   {tag}
-                  <button onClick={() => removeTag(tag)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff6688', fontSize: 10, padding: 0, lineHeight: 1 }}>✕</button>
+                  <button onClick={() => removeTag(tag)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 10, padding: 0, lineHeight: 1 }}>✕</button>
                 </span>
               ))}
               <input
@@ -212,7 +207,7 @@ export default function CrmContactModal({ onClose, onCreated, initialData }) {
                 placeholder={tags.length === 0 ? 'Type tag + Enter (e.g. education, work…)' : '+ tag'}
                 style={{
                   background: 'none', border: 'none', outline: 'none',
-                  color: '#f0f0f0', fontSize: 12, minWidth: 120, flex: 1,
+                  color: 'var(--color-text-main)', fontSize: 12, minWidth: 120, flex: 1,
                   fontFamily: 'inherit',
                 }}
               />
@@ -221,11 +216,11 @@ export default function CrmContactModal({ onClose, onCreated, initialData }) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
               {TAG_SUGGESTIONS.filter(s => !tags.includes(s) && s.includes(tagInput.toLowerCase())).slice(0, 8).map(s => (
                 <button key={s} onClick={() => addTag(s)} style={{
-                  padding: '2px 8px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'transparent', color: '#666677', cursor: 'pointer', fontSize: 11,
+                  padding: '2px 8px', borderRadius: 20, border: '1px solid var(--color-border)',
+                  background: 'transparent', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 11,
                   transition: 'all 0.15s',
                 }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff3366'; e.currentTarget.style.color = '#ff3366'; }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.color = 'var(--color-accent)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#666677'; }}
                 >
                   + {s}
@@ -235,7 +230,7 @@ export default function CrmContactModal({ onClose, onCreated, initialData }) {
           </div>
 
           {error && (
-            <div style={{ fontSize: 12, color: '#ff3366', padding: '8px 12px', background: 'rgba(255,51,102,0.1)', borderRadius: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--color-accent)', padding: '8px 12px', background: 'var(--color-bg-panel-hover)', borderRadius: 8 }}>
               {error}
             </div>
           )}
@@ -244,16 +239,16 @@ export default function CrmContactModal({ onClose, onCreated, initialData }) {
         {/* Footer */}
         <div style={{ display: 'flex', gap: 10, marginTop: 28 }}>
           <button onClick={onClose} style={{
-            flex: 1, padding: '10px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
-            background: 'transparent', color: '#888899', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+            flex: 1, padding: '10px', borderRadius: 10, border: '1px solid var(--color-border)',
+            background: 'transparent', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600,
           }}>
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={saving} style={{
             flex: 2, padding: '10px', borderRadius: 10, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
-            background: saving ? 'rgba(255,51,102,0.4)' : 'linear-gradient(135deg, #ff3366, #ff6b8a)',
+            background: saving ? 'rgba(255,255,255,0.2)' : 'var(--color-accent)',
             color: '#fff', fontSize: 13, fontWeight: 700, transition: 'all 0.2s',
-            boxShadow: saving ? 'none' : '0 4px 16px rgba(255,51,102,0.3)',
+            boxShadow: saving ? 'none' : '0 4px 16px rgba(0,0,0,0.3)',
           }}>
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add to Network'}
           </button>
@@ -272,7 +267,7 @@ export default function CrmContactModal({ onClose, onCreated, initialData }) {
 
 function FieldLabel({ children }) {
   return (
-    <label style={{ fontSize: 11, fontWeight: 700, color: '#888899', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+    <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
       {children}
     </label>
   );
@@ -289,12 +284,12 @@ function FormField({ label, value, onChange, placeholder, type = 'text', flex = 
         placeholder={placeholder}
         style={{
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 8, color: '#f0f0f0', fontSize: 13, padding: '9px 12px',
+          borderRadius: 8, color: 'var(--color-text-main)', fontSize: 13, padding: '9px 12px',
           outline: 'none', width: '100%', boxSizing: 'border-box', transition: 'border-color 0.2s',
           colorScheme: 'dark', fontFamily: 'inherit',
         }}
-        onFocus={e => e.target.style.borderColor = 'rgba(255,51,102,0.5)'}
-        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+        onFocus={e => e.target.style.borderColor = 'var(--color-accent)'}
+        onBlur={e => e.target.style.borderColor = 'var(--color-glass-bg)'}
       />
     </div>
   );
@@ -302,13 +297,13 @@ function FormField({ label, value, onChange, placeholder, type = 'text', flex = 
 
 const closeBtn = {
   background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8,
-  width: 32, height: 32, cursor: 'pointer', color: '#888899', fontSize: 16,
+  width: 32, height: 32, cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 16,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 
 const selectStyle = {
   width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-  borderRadius: 8, color: '#f0f0f0', fontSize: 13, padding: '9px 12px',
+  borderRadius: 8, color: 'var(--color-text-main)', fontSize: 13, padding: '9px 12px',
   outline: 'none', cursor: 'pointer', colorScheme: 'dark', fontFamily: 'inherit',
   boxSizing: 'border-box',
 };

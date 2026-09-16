@@ -4,11 +4,13 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { PiggyBank, TrendingUp, CreditCard, Landmark, ArrowRight, Umbrella } from 'lucide-react';
 import { safeFormatCurrency } from '@/lib/formatters';
+import { useSettings } from '@/lib/SettingsContext';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 export default function AccountGridCard({ accounts = [], exchangeRates = [] }) {
-  const baseCurrency = 'AUD';
+  const { settings } = useSettings();
+  const baseCurrency = settings.finance.baseCurrency;
 
   const getRate = (from, to) => {
     if (from === to) return 1;

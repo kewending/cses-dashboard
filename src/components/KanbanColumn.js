@@ -12,18 +12,18 @@ export default function KanbanColumn({ id, title, dateStr, tasks, sessions, onAd
   const isOverloaded = totalPlanned > 330; // 5.5 hours
 
   return (
-    <div className="flex-1 min-w-[280px] bg-[rgba(255,255,255,0.02)] border border-white/5 rounded-2xl flex flex-col overflow-hidden p-2">
-      <div className="px-3 py-3 flex items-center justify-between font-semibold text-white/90">
+    <div className="flex-1 min-w-[280px] bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-2xl flex flex-col overflow-hidden p-2">
+      <div className="px-3 py-3 flex items-center justify-between font-semibold text-[var(--color-text-main)]">
         <div className="flex items-center gap-3 group">
           <div>
             <div className="text-[15px]">{title}</div>
-            {dateStr && <div className="text-[10px] text-white/40 mt-0.5">{dateStr}</div>}
+            {dateStr && <div className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">{dateStr}</div>}
           </div>
           {dateStr && onShutdownClick && (
-            <button onClick={() => onShutdownClick(dateStr)} className="opacity-0 group-hover:opacity-100 bg-[#2ecc71] hover:bg-[#27ae60] text-white text-[11px] font-bold px-2 py-1 rounded shadow-sm transition-all duration-200">Shutdown</button>
+            <button onClick={() => onShutdownClick(dateStr)} className="opacity-0 group-hover:opacity-100 bg-[#2ecc71] hover:bg-[#27ae60] text-[var(--color-text-main)] text-[11px] font-bold px-2 py-1 rounded shadow-sm transition-all duration-200">Shutdown</button>
           )}
         </div>
-        <div className={`text-[11px] font-mono px-2 py-1 rounded ${isOverloaded ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white/60'}`}>
+        <div className={`text-[11px] font-mono px-2 py-1 rounded ${isOverloaded ? 'bg-red-500/20 text-red-400' : 'bg-[var(--color-bg-panel-hover)] text-[var(--color-text-muted)]'}`}>
           {formatMins(totalPlanned)}
         </div>
       </div>
@@ -32,7 +32,7 @@ export default function KanbanColumn({ id, title, dateStr, tasks, sessions, onAd
         <div className="px-2">
           <button
             onClick={() => onAddTaskClick(id, dateStr)}
-            className="w-full text-left px-3 py-2 mb-3 rounded-lg border border-transparent hover:bg-white/5 text-[13px] text-white/50 hover:text-white/80 transition-colors flex items-center gap-2"
+            className="w-full text-left px-3 py-2 mb-3 rounded-lg border border-transparent hover:bg-[var(--color-bg-panel)] text-[13px] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] transition-colors flex items-center gap-2"
           >
             <span className="text-lg leading-none">+</span> Add task
           </button>

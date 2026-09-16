@@ -4,10 +4,11 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wallet, TrendingUp, PiggyBank, CreditCard, Umbrella } from 'lucide-react';
 import { safeFormatCurrency } from '@/lib/formatters';
+import { useSettings } from '@/lib/SettingsContext';
 
 export default function NetWorthKpiWidget({ accounts = [], exchangeRates = [] }) {
-  // Determine base currency, default to first account's currency or 'USD'
-  const baseCurrency = 'AUD'; // Simplified for now, can be dynamically selected
+  const { settings } = useSettings();
+  const baseCurrency = settings.finance.baseCurrency;
 
   const getRate = (from, to) => {
     if (from === to) return 1;

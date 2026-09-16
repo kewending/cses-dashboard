@@ -6,8 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react';
 import TransactionDrawer from './TransactionDrawer';
+import { useSettings } from '@/lib/SettingsContext';
 
 export default function CalendarLedgerView({ transactions = [], accounts = [], categories = [], selectedAccountId }) {
+  const { settings } = useSettings();
+  const baseCurrency = settings.finance.baseCurrency;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -80,16 +83,16 @@ export default function CalendarLedgerView({ transactions = [], accounts = [], c
           <div className="flex items-center space-x-6 text-sm">
             <div className="flex flex-col items-end">
               <span className="text-muted-foreground">Inflow</span>
-              <span className="text-green-500 font-semibold">+${monthStats.income.toLocaleString()}</span>
+              <span className="text-green-500 font-semibold">+{baseCurrency}{monthStats.income.toLocaleString()}</span>
             </div>
             <div className="flex flex-col items-end">
               <span className="text-muted-foreground">Outflow</span>
-              <span className="text-red-500 font-semibold">-${monthStats.expense.toLocaleString()}</span>
+              <span className="text-red-500 font-semibold">-{baseCurrency}{monthStats.expense.toLocaleString()}</span>
             </div>
             <div className="flex flex-col items-end border-l pl-6">
               <span className="text-muted-foreground">Net Flow</span>
               <span className={`font-bold ${monthStats.net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {monthStats.net >= 0 ? '+' : '-'}${Math.abs(monthStats.net).toLocaleString()}
+                {monthStats.net >= 0 ? '+' : '-'}{baseCurrency}{Math.abs(monthStats.net).toLocaleString()}
               </span>
             </div>
           </div>
@@ -141,12 +144,12 @@ export default function CalendarLedgerView({ transactions = [], accounts = [], c
                   <div className="mt-2 space-y-1 text-xs">
                     {dayData.income > 0 && (
                       <div className="text-green-500 font-medium truncate">
-                        +{dayData.income.toLocaleString()}
+                        +{baseCurrency}{dayData.income.toLocaleString()}
                       </div>
                     )}
                     {dayData.expense > 0 && (
                       <div className="text-red-500 font-medium truncate">
-                        -{dayData.expense.toLocaleString()}
+                        -{baseCurrency}{dayData.expense.toLocaleString()}
                       </div>
                     )}
                   </div>

@@ -2,62 +2,20 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSettings } from '../lib/SettingsContext';
+import CrmAvatar from './CrmAvatar';
 import { createContact } from '@/app/crm/serverActions';
 import CrmContactModal from './CrmContactModal';
-
-// ─── Tier Config ──────────────────────────────────────────────────────────────
-const TIER_CONFIG = {
-  0: { label: 'T0', color: '#ff3366', bg: 'rgba(255,51,102,0.15)', name: 'Core' },
-  1: { label: 'T1', color: '#ff8c42', bg: 'rgba(255,140,66,0.15)', name: 'Key' },
-  2: { label: 'T2', color: '#4ecdc4', bg: 'rgba(78,205,196,0.15)', name: 'Network' },
-  3: { label: 'T3', color: '#888899', bg: 'rgba(136,136,153,0.15)', name: 'Contact' },
-};
 
 const METHOD_ICONS = {
   email: '✉️', phone: '📞', wechat: '💬', linkedin: '🔗',
   twitter: '🐦', github: '⌨️', scholar: '🎓', other: '🌐',
 };
 
-// ─── Avatar Placeholder ───────────────────────────────────────────────────────
-function Avatar({ contact, size = 40 }) {
-  const initials = useMemo(() => {
-    const cn = contact.chineseName || '';
-    const en = contact.fullName || '';
-    if (cn) return cn.slice(0, 2);
-    const parts = en.trim().split(' ');
-    return parts.length > 1
-      ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-      : en.slice(0, 2).toUpperCase();
-  }, [contact]);
-
-  const tier = TIER_CONFIG[contact.tier] ?? TIER_CONFIG[3];
-  const fontSize = size <= 36 ? size * 0.38 : size * 0.35;
-
-  if (contact.avatarUrl) {
-    return (
-      <img
-        src={contact.avatarUrl}
-        alt={contact.fullName}
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-      />
-    );
-  }
-
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: tier.bg, border: `2px solid ${tier.color}`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize, fontWeight: 700, color: tier.color, letterSpacing: '-0.5px',
-    }}>
-      {initials}
-    </div>
-  );
-}
-
 // ─── Tier Badge ───────────────────────────────────────────────────────────────
 function TierBadge({ tier }) {
-  const t = TIER_CONFIG[tier] ?? TIER_CONFIG[3];
+  const { settings: { crmTiers } } = useSettings();
+  const t = crmTiers[tier] ?? crmTiers[3];
   return (
     <span style={{
       fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
@@ -86,29 +44,29 @@ function ListRow({ contact }) {
         borderBottom: '1px solid rgba(255,255,255,0.04)',
       }}
     >
-      <Avatar contact={contact} size={40} />
+      <CrmAvatar contact={contact} size={40} />
 
       {/* Name block */}
       <div style={{ minWidth: 0, flex: '0 0 220px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           {contact.chineseName && (
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#f0f0f0' }}>{contact.chineseName}</span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text-main)' }}>{contact.chineseName}</span>
           )}
           <span style={{
             fontWeight: contact.chineseName ? 400 : 700,
             fontSize: 14,
-            color: contact.chineseName ? '#888899' : '#f0f0f0',
+            color: contact.chineseName ? 'var(--color-text-muted)' : 'var(--color-text-main)',
           }}>
             {contact.chineseName ? `(${contact.fullName})` : contact.fullName}
           </span>
           {contact.displayName && (
-            <span style={{ fontSize: 12, color: '#666677', fontStyle: 'italic' }}>
+            <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
               「{contact.displayName}」
             </span>
           )}
         </div>
         {primaryOrg && (
-          <div style={{ fontSize: 12, color: '#888899', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {primaryOrg.titleOrMajor && `${primaryOrg.titleOrMajor} @ `}{primaryOrg.organization}
           </div>
         )}
@@ -140,9 +98,9 @@ function ListRow({ contact }) {
       <Link
         href={`/crm/${contact.id}`}
         style={{
-          fontSize: 12, color: hovering ? '#ff3366' : '#555566',
+          fontSize: 12, color: hovering ? 'var(--color-accent)' : '#555566',
           textDecoration: 'none', padding: '4px 10px', borderRadius: 8,
-          border: `1px solid ${hovering ? '#ff3366' : 'transparent'}`,
+          border: `1px solid ${hovering ? 'var(--color-accent)' : 'transparent'}`,
           transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0,
         }}
       >
@@ -157,7 +115,8 @@ function ContactCard({ contact }) {
   const [hovering, setHovering] = useState(false);
   const primaryOrg = contact.backgroundHistory?.[0];
   const primaryMethods = (contact.contactMethods || []).slice(0, 3);
-  const tier = TIER_CONFIG[contact.tier] ?? TIER_CONFIG[3];
+  const { settings: { crmTiers } } = useSettings();
+  const tier = crmTiers[contact.tier] ?? crmTiers[3];
 
   return (
     <Link href={`/crm/${contact.id}`} style={{ textDecoration: 'none' }}>
@@ -165,7 +124,7 @@ function ContactCard({ contact }) {
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
         style={{
-          background: 'rgba(255,255,255,0.03)',
+          background: 'var(--color-bg-panel)',
           border: `1px solid ${hovering ? tier.color : 'rgba(255,255,255,0.06)'}`,
           borderRadius: 16, padding: '20px 16px', cursor: 'pointer',
           transition: 'all 0.25s',
@@ -182,21 +141,21 @@ function ContactCard({ contact }) {
           opacity: hovering ? 1 : 0.5, transition: 'opacity 0.25s',
         }} />
 
-        <Avatar contact={contact} size={56} />
+        <CrmAvatar contact={contact} size={70} />
 
         <div>
           {contact.chineseName && (
-            <div style={{ fontWeight: 700, fontSize: 14, color: '#f0f0f0' }}>{contact.chineseName}</div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text-main)' }}>{contact.chineseName}</div>
           )}
           <div style={{
             fontSize: contact.chineseName ? 12 : 14,
             fontWeight: contact.chineseName ? 400 : 700,
-            color: contact.chineseName ? '#888899' : '#f0f0f0',
+            color: contact.chineseName ? 'var(--color-text-muted)' : 'var(--color-text-main)',
           }}>
             {contact.fullName}
           </div>
           {contact.displayName && (
-            <div style={{ fontSize: 11, color: '#666677', fontStyle: 'italic', marginTop: 2 }}>「{contact.displayName}」</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontStyle: 'italic', marginTop: 2 }}>「{contact.displayName}」</div>
           )}
         </div>
 
@@ -204,7 +163,7 @@ function ContactCard({ contact }) {
 
         {primaryOrg && (
           <div style={{
-            fontSize: 11, color: '#888899', lineHeight: 1.4, maxWidth: '100%',
+            fontSize: 11, color: 'var(--color-text-muted)', lineHeight: 1.4, maxWidth: '100%',
             overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
           }}>
             {primaryOrg.titleOrMajor && `${primaryOrg.titleOrMajor} · `}{primaryOrg.organization}
@@ -234,21 +193,23 @@ function StatsBar({ contacts }) {
     count: contacts.filter(c => c.tier === t).length,
   }));
 
+  const { settings: { crmTiers } } = useSettings();
+  
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
       padding: '14px 20px', borderRadius: 14,
-      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+      background: 'var(--color-bg-panel)', border: '1px solid rgba(255,255,255,0.06)',
       marginBottom: 20,
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span style={{ fontSize: 32, fontWeight: 800, color: '#f0f0f0', lineHeight: 1 }}>{total}</span>
-        <span style={{ fontSize: 13, color: '#888899' }}>contacts</span>
+        <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--color-text-main)', lineHeight: 1 }}>{total}</span>
+        <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>contacts</span>
       </div>
-      <div style={{ width: 1, height: 32, background: 'rgba(255,255,255,0.08)' }} />
+      <div style={{ width: 1, height: 32, background: 'var(--color-glass-bg)' }} />
       <div style={{ display: 'flex', gap: 10 }}>
         {byCounts.map(({ tier, count }) => {
-          const t = TIER_CONFIG[tier];
+          const t = crmTiers[tier];
           return (
             <div key={tier} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
@@ -280,12 +241,12 @@ function AlphaNav({ letters, onJump }) {
           onClick={() => letters.has(l) && onJump(l)}
           style={{
             width: 26, height: 26, borderRadius: 6, border: 'none', cursor: letters.has(l) ? 'pointer' : 'default',
-            background: letters.has(l) ? 'rgba(255,51,102,0.12)' : 'rgba(255,255,255,0.03)',
-            color: letters.has(l) ? '#ff3366' : '#444455',
+            background: letters.has(l) ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.03)',
+            color: letters.has(l) ? 'var(--color-accent)' : '#444455',
             fontSize: 11, fontWeight: 700, transition: 'all 0.15s',
           }}
-          onMouseEnter={e => letters.has(l) && (e.currentTarget.style.background = 'rgba(255,51,102,0.25)')}
-          onMouseLeave={e => letters.has(l) && (e.currentTarget.style.background = 'rgba(255,51,102,0.12)')}
+          onMouseEnter={e => letters.has(l) && (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
+          onMouseLeave={e => letters.has(l) && (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
         >
           {l}
         </button>
@@ -296,6 +257,7 @@ function AlphaNav({ letters, onJump }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function CrmDirectory({ initialContacts }) {
+  const { settings: { crmTiers } } = useSettings();
   const [contacts, setContacts] = useState(initialContacts || []);
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState('all');
@@ -349,10 +311,10 @@ export default function CrmDirectory({ initialContacts }) {
     <div style={{ maxWidth: 1200, margin: '0 auto' }}>
       {/* Page Title */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: '#f0f0f0', margin: 0, letterSpacing: '-0.5px' }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-text-main)', margin: 0, letterSpacing: '-0.5px' }}>
           Network CRM
         </h1>
-        <p style={{ fontSize: 13, color: '#888899', marginTop: 4 }}>
+        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 4 }}>
           Your personal relationship network · Tier 0–3 同心圆管理
         </p>
       </div>
@@ -366,18 +328,18 @@ export default function CrmDirectory({ initialContacts }) {
       }}>
         {/* Search */}
         <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 180 }}>
-          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: '#666677' }}>🔍</span>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: 'var(--color-text-muted)' }}>🔍</span>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search name, org, city…"
             style={{
               width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 10, color: '#f0f0f0', fontSize: 13, padding: '9px 12px 9px 34px',
+              borderRadius: 10, color: 'var(--color-text-main)', fontSize: 13, padding: '9px 12px 9px 34px',
               outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s',
             }}
-            onFocus={e => e.target.style.borderColor = 'rgba(255,51,102,0.5)'}
-            onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+            onFocus={e => e.target.style.borderColor = 'var(--color-accent)'}
+            onBlur={e => e.target.style.borderColor = 'var(--color-glass-bg)'}
           />
         </div>
 
@@ -385,7 +347,7 @@ export default function CrmDirectory({ initialContacts }) {
         <div style={{ display: 'flex', gap: 4 }}>
           {['all', '0', '1', '2', '3'].map(t => {
             const active = tierFilter === t;
-            const config = t === 'all' ? null : TIER_CONFIG[Number(t)];
+            const config = t === 'all' ? null : crmTiers[Number(t)];
             return (
               <button
                 key={t}
@@ -397,7 +359,7 @@ export default function CrmDirectory({ initialContacts }) {
                     ? (config ? config.bg : 'rgba(255,255,255,0.1)')
                     : 'rgba(255,255,255,0.04)',
                   color: active
-                    ? (config ? config.color : '#f0f0f0')
+                    ? (config ? config.color : 'var(--color-text-main)')
                     : '#666677',
                   border: active
                     ? `1px solid ${config ? config.color : 'rgba(255,255,255,0.2)'}`
@@ -419,8 +381,8 @@ export default function CrmDirectory({ initialContacts }) {
               style={{
                 padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
                 fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
-                background: view === v ? 'rgba(255,51,102,0.2)' : 'transparent',
-                color: view === v ? '#ff3366' : '#666677',
+                background: view === v ? 'rgba(255,255,255,0.1)' : 'transparent',
+                color: view === v ? 'var(--color-accent)' : '#666677',
               }}
             >
               {label}
@@ -433,10 +395,9 @@ export default function CrmDirectory({ initialContacts }) {
           onClick={() => setShowModal(true)}
           style={{
             padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
-            background: 'linear-gradient(135deg, #ff3366, #ff6b8a)',
+            background: 'var(--color-accent)',
             color: '#fff', fontSize: 13, fontWeight: 700, transition: 'all 0.2s',
             display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-            boxShadow: '0 4px 16px rgba(255,51,102,0.3)',
           }}
           onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
           onMouseLeave={e => e.currentTarget.style.transform = 'none'}
@@ -453,7 +414,7 @@ export default function CrmDirectory({ initialContacts }) {
       {/* Results */}
       {filtered.length === 0 ? (
         <div style={{
-          textAlign: 'center', padding: '80px 20px', color: '#555566',
+          textAlign: 'center', padding: '80px 20px', color: 'var(--color-text-muted)',
         }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>🤝</div>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No contacts found</div>
@@ -462,15 +423,15 @@ export default function CrmDirectory({ initialContacts }) {
       ) : view === 'list' ? (
         /* ── Compact List ── */
         <div style={{
-          background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
+          background: 'var(--color-glass-bg)', border: '1px solid rgba(255,255,255,0.05)',
           borderRadius: 16, overflow: 'hidden',
         }}>
           {grouped.map(([letter, group]) => (
             <div key={letter} ref={el => letterRefs.current[letter] = el}>
               {/* Letter divider */}
               <div style={{
-                padding: '6px 16px', fontSize: 11, fontWeight: 800, color: '#ff3366',
-                letterSpacing: '1.5px', background: 'rgba(255,51,102,0.06)',
+                padding: '6px 16px', fontSize: 11, fontWeight: 800, color: 'var(--color-accent)',
+                letterSpacing: '1.5px', background: 'var(--color-glass-bg)',
                 borderBottom: '1px solid rgba(255,255,255,0.04)',
               }}>
                 {letter}
@@ -492,7 +453,7 @@ export default function CrmDirectory({ initialContacts }) {
 
       {/* Results count */}
       {filtered.length > 0 && (
-        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: '#444455' }}>
+        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: 'var(--color-text-muted)' }}>
           Showing {filtered.length} of {contacts.filter(c => c.status === 'active').length} contacts
         </div>
       )}

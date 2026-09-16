@@ -41,7 +41,7 @@ export default function Sidebar({ defaultCollapsed = false }) {
         onClick={toggleSidebar}
         title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
       >
-        <div className="opacity-0 group-hover/toggle:opacity-100 bg-[var(--color-bg-dark)] border border-[var(--color-glass-border)] rounded-full w-6 h-6 flex items-center justify-center text-[var(--color-text-muted)] hover:text-white hover:bg-[rgba(255,255,255,0.1)] transition-all shadow-lg absolute right-[-12px] z-50">
+        <div className="opacity-0 group-hover/toggle:opacity-100 bg-[var(--color-bg-dark)] border border-[var(--color-glass-border)] rounded-full w-6 h-6 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-bg-panel-hover)] transition-all shadow-lg absolute right-[-12px] z-50">
           {isCollapsed ? "»" : "«"}
         </div>
       </div>
@@ -63,8 +63,8 @@ export default function Sidebar({ defaultCollapsed = false }) {
                 href={item.href}
                 className={`flex items-center gap-4 rounded-xl transition-all cursor-pointer group ${isCollapsed ? 'justify-center p-3' : 'p-3 px-4'}
                   ${isActive
-                    ? "text-white font-bold drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
-                    : "hover:bg-[rgba(255,255,255,0.05)] text-[var(--color-text-muted)] hover:text-white"
+                    ? "text-[var(--color-text-main)] font-bold drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
+                    : "hover:bg-[var(--color-bg-panel)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
                   }`}
                 title={isCollapsed ? item.label : undefined}
               >

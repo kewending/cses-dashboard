@@ -129,7 +129,7 @@ function WidgetWrapper({ id, children, height, onResize, indicator, activeId }) 
           document.addEventListener('pointerup', onUp);
         }}
       >
-        <div className="h-1.5 w-12 bg-[var(--color-glass-border)] rounded-full hover:bg-[var(--color-accent)] transition-colors shadow-[0_0_10px_var(--color-bg-dark)] border border-[rgba(255,255,255,0.05)]"></div>
+        <div className="h-1.5 w-12 bg-[var(--color-glass-border)] rounded-full hover:bg-[var(--color-accent)] transition-colors shadow-[0_0_10px_var(--color-bg-dark)] border border-[var(--color-glass-border)]"></div>
       </div>
     </div>
   );
@@ -277,7 +277,7 @@ export default function Dashboard() {
         <div className="glass-panel flex flex-col h-full overflow-hidden">
           <div className="flex justify-between items-center p-6 pb-2">
             <h2 className="text-lg font-semibold text-[var(--color-text-muted)] tracking-wide">Health Telemetry</h2>
-            <span className="text-xs px-2 py-1 bg-[rgba(255,255,255,0.05)] rounded-md">7 Days</span>
+            <span className="text-xs px-2 py-1 bg-[var(--color-bg-panel)] rounded-md">7 Days</span>
           </div>
           <div className="flex-1 flex flex-col items-center justify-center p-6 pt-2 h-full">
              <div className="w-full h-full border border-dashed border-[var(--color-glass-border)] rounded-xl flex items-end justify-between gap-2 opacity-70 p-4">
@@ -296,7 +296,7 @@ export default function Dashboard() {
           <div className="flex-1 p-6 pt-2 h-full">
             <div className="h-full bg-[rgba(255,51,102,0.05)] border border-[var(--color-accent-glow)] rounded-xl p-6 flex flex-col justify-center relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-accent)]/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2"></div>
-              <p className="text-[#f0f0f0] text-[15px] leading-relaxed relative z-10 custom-scrollbar overflow-y-auto">
+              <p className="text-[var(--color-text-main)] text-[15px] leading-relaxed relative z-10 custom-scrollbar overflow-y-auto">
                 <span className="text-[var(--color-accent)] font-bold mr-2 text-lg block mb-1">✦ Oracle Insight:</span> 
                 Your deep sleep has averaged 1h 45m this week, correlating with a 20% increase in deep work sessions. Keep maintaining your 10:30 PM wind-down routine to maximize tomorrow's writing output.
               </p>
@@ -312,13 +312,13 @@ export default function Dashboard() {
           </div>
           <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
             <ul className="flex flex-col gap-3">
-              <li className="flex items-start gap-3 p-3 hover:bg-[rgba(255,255,255,0.03)] rounded-lg cursor-pointer transition-colors">
+              <li className="flex items-start gap-3 p-3 hover:bg-[var(--color-glass-bg)] rounded-lg cursor-pointer transition-colors">
                 <div className="w-5 h-5 rounded border-2 border-[var(--color-accent)] mt-0.5 shrink-0"></div>
-                <div className="text-sm text-white font-medium">Finish Thesis Chapter 3</div>
+                <div className="text-sm text-[var(--color-text-main)] font-medium">Finish Thesis Chapter 3</div>
               </li>
-              <li className="flex items-start gap-3 p-3 hover:bg-[rgba(255,255,255,0.03)] rounded-lg cursor-pointer transition-colors">
+              <li className="flex items-start gap-3 p-3 hover:bg-[var(--color-glass-bg)] rounded-lg cursor-pointer transition-colors">
                 <div className="w-5 h-5 rounded border-2 border-[var(--color-glass-border)] mt-0.5 shrink-0"></div>
-                <div className="text-sm text-white font-medium">Review Q3 Budget</div>
+                <div className="text-sm text-[var(--color-text-main)] font-medium">Review Q3 Budget</div>
               </li>
             </ul>
           </div>
@@ -332,7 +332,7 @@ export default function Dashboard() {
            <div className="flex flex-col gap-4 flex-1 overflow-y-auto p-4 custom-scrollbar">
              <div className="flex gap-4 text-sm relative">
                <span className="text-[var(--color-text-muted)] w-10 text-right pt-2 font-mono text-xs">09:00</span>
-               <div className="flex-1 bg-[rgba(255,255,255,0.05)] rounded-lg p-3 border-l-4 border-blue-400">Deep Work</div>
+               <div className="flex-1 bg-[var(--color-bg-panel)] rounded-lg p-3 border-l-4 border-blue-400">Deep Work</div>
              </div>
              <div className="flex items-center gap-2 -my-2 relative z-10">
                <span className="text-[var(--color-accent)] w-10 text-right text-[10px] font-bold font-mono">11:30</span>
@@ -340,7 +340,7 @@ export default function Dashboard() {
              </div>
              <div className="flex gap-4 text-sm">
                <span className="text-[var(--color-text-muted)] w-10 text-right pt-2 font-mono text-xs">13:00</span>
-               <div className="flex-1 bg-[rgba(255,255,255,0.05)] rounded-lg p-3 border-l-4 border-purple-400">Lunch</div>
+               <div className="flex-1 bg-[var(--color-bg-panel)] rounded-lg p-3 border-l-4 border-purple-400">Lunch</div>
              </div>
            </div>
         </div>
@@ -360,7 +360,7 @@ export default function Dashboard() {
       case 'journal': return (
         <div className="glass-panel h-full flex items-center justify-center gap-4 bg-[var(--color-accent)]/10 border-[var(--color-accent)]/30 hover:bg-[var(--color-accent)]/20 cursor-pointer transition-all p-6 group/btn">
           <span className="text-2xl group-hover/btn:scale-110 transition-transform">✍️</span>
-          <span className="font-semibold text-white tracking-wide">Quick Journal Entry</span>
+          <span className="font-semibold text-[var(--color-text-main)] tracking-wide">Quick Journal Entry</span>
         </div>
       );
       default: return null;
@@ -404,7 +404,7 @@ export default function Dashboard() {
                     document.addEventListener('pointerup', onUp);
                   }}
                 >
-                  <div className="w-1.5 h-16 bg-[var(--color-glass-border)] rounded-full group-hover/colres:bg-[var(--color-accent)] transition-colors shadow-[0_0_10px_var(--color-bg-dark)] border border-[rgba(255,255,255,0.05)]"></div>
+                  <div className="w-1.5 h-16 bg-[var(--color-glass-border)] rounded-full group-hover/colres:bg-[var(--color-accent)] transition-colors shadow-[0_0_10px_var(--color-bg-dark)] border border-[var(--color-glass-border)]"></div>
                 </div>
               )}
             </div>
@@ -432,7 +432,7 @@ export default function Dashboard() {
   return (
     <div className="w-full max-w-[1600px] mx-auto animate-in fade-in duration-500 pb-20">
       <div className="flex items-center justify-between mb-8 px-2">
-        <h1 className="text-3xl font-bold text-white tracking-wide">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-[var(--color-text-main)] tracking-wide">Dashboard</h1>
         <div className="text-[var(--color-text-muted)] text-sm">Friday, September 11, 2026</div>
       </div>
       

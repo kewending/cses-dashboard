@@ -1,1 +1,1 @@
-export default function Page() { return <div className='p-8 text-white'>identity Module - Coming Soon</div>; }
+export default function Page() { return <div className='p-8 text-[var(--color-text-main)]'>identity Module - Coming Soon</div>; }

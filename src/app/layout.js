@@ -1,5 +1,6 @@
 import Sidebar from "../components/Sidebar";
 import { cookies } from 'next/headers';
+import { SettingsProvider } from "../lib/SettingsContext";
 import "./globals.css";
 
 export const metadata = {
@@ -14,15 +15,17 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="flex h-screen overflow-hidden">
-        {/* Responsive, Stateful Global Sidebar */}
-        <Sidebar defaultCollapsed={defaultCollapsed} />
+        <SettingsProvider>
+          {/* Responsive, Stateful Global Sidebar */}
+          <Sidebar defaultCollapsed={defaultCollapsed} />
 
-        {/* Main Content Area */}
-        <main className="flex-1 h-full overflow-y-auto relative bg-[var(--color-bg-dark)]">
-          <div className="p-8 pt-12">
-            {children}
-          </div>
-        </main>
+          {/* Main Content Area */}
+          <main className="flex-1 h-full overflow-y-auto relative bg-[var(--color-bg-dark)]">
+            <div className="p-8 pt-12">
+              {children}
+            </div>
+          </main>
+        </SettingsProvider>
       </body>
     </html>
   );

@@ -3,12 +3,14 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { safeFormatCurrency } from '@/lib/formatters';
+import { useSettings } from '@/lib/SettingsContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#64748b'];
 
 export default function AssetAllocationChart({ accounts = [], exchangeRates = [] }) {
-  const baseCurrency = 'AUD';
+  const { settings } = useSettings();
+  const baseCurrency = settings.finance.baseCurrency;
 
   const getRate = (from, to) => {
     if (from === to) return 1;

@@ -89,18 +89,18 @@ export default function ShutdownView({
       {/* Date In Review Panel */}
       <div className="w-[350px] flex-shrink-0 flex flex-col gap-6 overflow-y-auto custom-scrollbar p-2">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-1">Date in review</h2>
-          <p className="text-sm text-gray-400">How you spent your time on {dateStr} in total</p>
+          <h2 className="text-2xl font-bold text-[var(--color-text-main)] mb-1">Date in review</h2>
+          <p className="text-sm text-[var(--color-text-muted)]">How you spent your time on {dateStr} in total</p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-8">
+        <div className="bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-2xl p-6 flex flex-col gap-8">
           <div>
-            <h3 className="text-lg font-semibold text-white mb-6">Total time</h3>
+            <h3 className="text-lg font-semibold text-[var(--color-text-main)] mb-6">Total time</h3>
 
             <div className="relative mt-8 mb-12">
               {/* Tooltip Actual */}
               <div
-                className="absolute -top-8 -translate-x-1/2 bg-green-500 text-white text-xs font-bold py-1 px-2 rounded whitespace-nowrap"
+                className="absolute -top-8 -translate-x-1/2 bg-green-500 text-[var(--color-text-main)] text-xs font-bold py-1 px-2 rounded whitespace-nowrap"
                 style={{ left: `${Math.min(100, actualPercent)}%` }}
               >
                 {formatHrsMins(totalActualSeconds)}
@@ -108,14 +108,14 @@ export default function ShutdownView({
               </div>
 
               {/* Progress Bar Background */}
-              <div className="h-1.5 w-full bg-white/10 rounded-full relative">
+              <div className="h-1.5 w-full bg-[var(--color-bg-panel-hover)] rounded-full relative">
                 {/* 6hr marker */}
-                <div className="absolute top-0 bottom-0 w-0.5 bg-white/20" style={{ left: `${sixHrPercent}%` }}>
-                  <span className="absolute top-3 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 whitespace-nowrap">6 hr</span>
+                <div className="absolute top-0 bottom-0 w-0.5 bg-[var(--color-bg-panel-hover)]" style={{ left: `${sixHrPercent}%` }}>
+                  <span className="absolute top-3 left-1/2 -translate-x-1/2 text-[10px] text-[var(--color-text-muted)] whitespace-nowrap">6 hr</span>
                 </div>
                 {/* 8hr marker */}
-                <div className="absolute top-0 bottom-0 w-0.5 bg-white/20" style={{ left: `${eightHrPercent}%` }}>
-                  <span className="absolute top-3 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 whitespace-nowrap">8 hr</span>
+                <div className="absolute top-0 bottom-0 w-0.5 bg-[var(--color-bg-panel-hover)]" style={{ left: `${eightHrPercent}%` }}>
+                  <span className="absolute top-3 left-1/2 -translate-x-1/2 text-[10px] text-[var(--color-text-muted)] whitespace-nowrap">8 hr</span>
                 </div>
 
                 {/* Actual Bar */}
@@ -127,7 +127,7 @@ export default function ShutdownView({
 
               {/* Tooltip Planned */}
               <div
-                className="absolute top-6 -translate-x-1/2 bg-gray-500 text-white text-[10px] font-bold py-1 px-2 rounded flex flex-col items-center whitespace-nowrap"
+                className="absolute top-6 -translate-x-1/2 bg-[var(--color-bg-panel)]0 text-[var(--color-text-main)] text-[10px] font-bold py-1 px-2 rounded flex flex-col items-center whitespace-nowrap"
                 style={{ left: `${Math.min(100, plannedPercent)}%` }}
               >
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-500"></div>
@@ -138,7 +138,7 @@ export default function ShutdownView({
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">How you spent your time</h3>
+            <h3 className="text-lg font-semibold text-[var(--color-text-main)] mb-4">How you spent your time</h3>
             <div className="h-[200px] w-full relative">
               {pieData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -164,7 +164,7 @@ export default function ShutdownView({
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--color-text-muted)]">
                   No tracked time
                 </div>
               )}
@@ -172,7 +172,7 @@ export default function ShutdownView({
 
             <div className="flex flex-wrap gap-3 mt-4 justify-center">
               {pieData.map((entry, index) => (
-                <div key={entry.name} className="flex items-center gap-1.5 text-xs text-gray-400">
+                <div key={entry.name} className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
                   <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
                   {entry.name}
                 </div>

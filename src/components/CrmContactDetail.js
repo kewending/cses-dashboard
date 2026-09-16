@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { useSettings } from '@/lib/SettingsContext';
+import CrmAvatar from './CrmAvatar';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -15,14 +17,6 @@ import {
   addContactRelation, removeContactRelation,
 } from '@/app/crm/serverActions';
 import CrmContactModal from './CrmContactModal';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-const TIER_CONFIG = {
-  0: { label: 'T0 · Core', color: '#ff3366', bg: 'rgba(255,51,102,0.15)' },
-  1: { label: 'T1 · Key', color: '#ff8c42', bg: 'rgba(255,140,66,0.15)' },
-  2: { label: 'T2 · Network', color: '#4ecdc4', bg: 'rgba(78,205,196,0.15)' },
-  3: { label: 'T3 · Contact', color: '#888899', bg: 'rgba(136,136,153,0.15)' },
-};
 
 const METHOD_ICONS = {
   email: '✉️', phone: '📞', wechat: '💬', linkedin: '🔗',
@@ -62,80 +56,10 @@ function formatDateDisplay(dateStr) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Avatar({ contact, size = 80, onUpload }) {
-  const fileRef = useRef();
-  const initials = (() => {
-    const cn = contact.chineseName || '';
-    const en = contact.fullName || '';
-    if (cn) return cn.slice(0, 2);
-    const parts = en.trim().split(' ');
-    return parts.length > 1
-      ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-      : en.slice(0, 2).toUpperCase();
-  })();
-  const tier = TIER_CONFIG[contact.tier] ?? TIER_CONFIG[3];
-  const [hovering, setHovering] = useState(false);
-  const [uploading, setUploading] = useState(false);
-
-  const handleFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('contactId', contact.id);
-      const res = await fetch('/api/crm/upload-avatar', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.avatarUrl) onUpload?.(data.avatarUrl);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <div style={{ position: 'relative', width: size, height: size }}>
-      <div
-        onMouseEnter={() => setHovering(true)}
-        onMouseLeave={() => setHovering(false)}
-        onClick={() => fileRef.current?.click()}
-        style={{
-          width: size, height: size, borderRadius: '50%', cursor: 'pointer',
-          overflow: 'hidden', position: 'relative',
-          border: `3px solid ${tier.color}`, boxSizing: 'border-box',
-        }}
-      >
-        {contact.avatarUrl ? (
-          <img src={contact.avatarUrl} alt={contact.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <div style={{
-            width: '100%', height: '100%',
-            background: tier.bg,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: size * 0.3, fontWeight: 800, color: tier.color,
-          }}>
-            {initials}
-          </div>
-        )}
-        {/* Hover overlay */}
-        <div style={{
-          position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          opacity: hovering ? 1 : 0, transition: 'opacity 0.2s',
-          fontSize: 20,
-        }}>
-          {uploading ? '⏳' : '📷'}
-        </div>
-      </div>
-      <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
-    </div>
-  );
-}
-
 function SectionTitle({ children, action }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-      <h3 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#888899', textTransform: 'uppercase', letterSpacing: '1px' }}>
+      <h3 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
         {children}
       </h3>
       {action}
@@ -149,12 +73,12 @@ function AddButton({ onClick, label = '+ Add' }) {
       onClick={onClick}
       style={{
         background: 'none', border: '1px dashed rgba(255,255,255,0.15)',
-        borderRadius: 8, color: '#888899', cursor: 'pointer', padding: '6px 12px',
+        borderRadius: 8, color: 'var(--color-text-muted)', cursor: 'pointer', padding: '6px 12px',
         fontSize: 12, fontWeight: 600, width: '100%', marginTop: 8,
         transition: 'all 0.15s',
       }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff3366'; e.currentTarget.style.color = '#ff3366'; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = '#888899'; }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.color = 'var(--color-accent)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'var(--color-text-muted)'; }}
     >
       {label}
     </button>
@@ -166,7 +90,7 @@ function DeleteBtn({ onClick }) {
     <button
       onClick={onClick}
       style={{
-        background: 'none', border: 'none', cursor: 'pointer', color: '#555566',
+        background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)',
         fontSize: 14, padding: '2px 6px', borderRadius: 4, transition: 'color 0.15s',
         opacity: 0, // revealed via group hover in parent
       }}
@@ -177,6 +101,7 @@ function DeleteBtn({ onClick }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function CrmContactDetail({ initialContact }) {
+  const { settings: { crmTiers } } = useSettings();
   const router = useRouter();
   const [contact, setContact] = useState(initialContact);
   const [activeTab, setActiveTab] = useState('overview');
@@ -296,7 +221,7 @@ export default function CrmContactDetail({ initialContact }) {
     setShowEditModal(false);
   };
 
-  const tier = TIER_CONFIG[contact.tier] ?? TIER_CONFIG[3];
+  const tier = crmTiers[contact.tier] ?? crmTiers[3];
 
   // ── All relations (both directions) ──
   const allRelations = [
@@ -318,15 +243,15 @@ export default function CrmContactDetail({ initialContact }) {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto' }}>
       {/* Breadcrumb */}
-      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#888899' }}>
-        <Link href="/crm" style={{ color: '#888899', textDecoration: 'none', transition: 'color 0.15s' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#ff3366'}
-          onMouseLeave={e => e.currentTarget.style.color = '#888899'}
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-muted)' }}>
+        <Link href="/crm" style={{ color: 'var(--color-text-muted)', textDecoration: 'none', transition: 'color 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--color-accent)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}
         >
           🤝 Network CRM
         </Link>
         <span>›</span>
-        <span style={{ color: '#f0f0f0' }}>
+        <span style={{ color: 'var(--color-text-main)' }}>
           {contact.chineseName || contact.fullName}
         </span>
       </div>
@@ -339,7 +264,7 @@ export default function CrmContactDetail({ initialContact }) {
 
           {/* Identity card */}
           <div style={{
-            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+            background: 'var(--color-bg-panel)', border: '1px solid var(--color-border)',
             borderRadius: 20, padding: 24, position: 'relative', overflow: 'hidden',
           }}>
             {/* Tier color strip */}
@@ -349,17 +274,17 @@ export default function CrmContactDetail({ initialContact }) {
             }} />
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, paddingTop: 8 }}>
-              <Avatar contact={contact} size={88} onUpload={handleAvatarUpload} />
+              <CrmAvatar contact={contact} size={90} onUpload={handleAvatarUpload} />
 
               <div style={{ textAlign: 'center' }}>
                 {contact.chineseName && (
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#f0f0f0', lineHeight: 1.2 }}>{contact.chineseName}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text-main)', lineHeight: 1.2 }}>{contact.chineseName}</div>
                 )}
-                <div style={{ fontSize: contact.chineseName ? 14 : 22, fontWeight: contact.chineseName ? 400 : 800, color: contact.chineseName ? '#888899' : '#f0f0f0' }}>
+                <div style={{ fontSize: contact.chineseName ? 14 : 22, fontWeight: contact.chineseName ? 400 : 800, color: contact.chineseName ? 'var(--color-text-muted)' : 'var(--color-text-main)' }}>
                   {contact.fullName}
                 </div>
                 {contact.displayName && (
-                  <div style={{ fontSize: 12, color: '#666677', marginTop: 4, fontStyle: 'italic' }}>「{contact.displayName}」</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4, fontStyle: 'italic' }}>「{contact.displayName}」</div>
                 )}
               </div>
 
@@ -382,13 +307,13 @@ export default function CrmContactDetail({ initialContact }) {
 
           {/* Contact methods */}
           <div style={{
-            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+            background: 'var(--color-bg-panel)', border: '1px solid var(--color-border)',
             borderRadius: 16, padding: 18,
           }}>
             <SectionTitle>Contact Methods</SectionTitle>
 
             {(contact.contactMethods || []).length === 0 && !showAddMethod && (
-              <div style={{ fontSize: 12, color: '#555566', textAlign: 'center', padding: '8px 0' }}>No contact methods yet</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center', padding: '8px 0' }}>No contact methods yet</div>
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -397,33 +322,33 @@ export default function CrmContactDetail({ initialContact }) {
                   key={m.id}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
-                    borderRadius: 10, background: 'rgba(255,255,255,0.03)',
+                    borderRadius: 10, background: 'var(--color-bg-panel)',
                     transition: 'background 0.15s', cursor: 'default',
                   }}
                   className="method-row group"
                 >
                   <span style={{ fontSize: 16, flexShrink: 0 }}>{METHOD_ICONS[m.type] || '🌐'}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    {m.label && <div style={{ fontSize: 10, color: '#666677', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{m.label}</div>}
-                    <div style={{ fontSize: 12, color: '#d0d0d8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {m.label && <div style={{ fontSize: 10, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{m.label}</div>}
+                    <div style={{ fontSize: 12, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {m.value}
                     </div>
                   </div>
                   <button
                     onClick={() => navigator.clipboard.writeText(m.value)}
                     title="Copy"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: '2px 4px', color: '#888899' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: '2px 4px', color: 'var(--color-text-muted)' }}
                   >📋</button>
                   <button
                     onClick={() => handleDeleteMethod(m.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: '2px 4px', color: '#555566' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: '2px 4px', color: 'var(--color-text-muted)' }}
                   >✕</button>
                 </div>
               ))}
 
               {/* Add method form */}
               {showAddMethod && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, background: 'var(--color-bg-panel)', borderRadius: 10 }}>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <select
                       value={newMethod.type}
@@ -462,11 +387,11 @@ export default function CrmContactDetail({ initialContact }) {
               onClick={() => setShowEditModal(true)}
               style={{
                 flex: 1, padding: '9px', borderRadius: 10,
-                border: '1px solid rgba(255,255,255,0.1)', background: 'transparent',
-                color: '#d0d0d8', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                border: '1px solid var(--color-border)', background: 'transparent',
+                color: 'var(--color-text-main)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                 transition: 'all 0.15s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff3366'; e.currentTarget.style.color = '#ff3366'; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.color = 'var(--color-accent)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#d0d0d8'; }}
             >
               ✏️ Edit Info
@@ -476,7 +401,7 @@ export default function CrmContactDetail({ initialContact }) {
               style={{
                 flex: 1, padding: '9px', borderRadius: 10,
                 border: '1px solid rgba(255,51,102,0.2)', background: 'rgba(255,51,102,0.06)',
-                color: '#ff6688', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                color: 'var(--color-accent)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                 transition: 'all 0.15s',
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,51,102,0.15)'}
@@ -489,7 +414,7 @@ export default function CrmContactDetail({ initialContact }) {
 
         {/* ──────────── RIGHT COLUMN ──────────── */}
         <div style={{
-          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+          background: 'var(--color-bg-panel)', border: '1px solid var(--color-border)',
           borderRadius: 20, padding: 24, minHeight: 500,
         }}>
           {/* Tabs */}
@@ -501,9 +426,9 @@ export default function CrmContactDetail({ initialContact }) {
                 style={{
                   padding: '8px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                   borderRadius: '8px 8px 0 0', transition: 'all 0.15s',
-                  background: activeTab === tab.key ? 'rgba(255,51,102,0.12)' : 'transparent',
-                  color: activeTab === tab.key ? '#ff3366' : '#888899',
-                  borderBottom: activeTab === tab.key ? '2px solid #ff3366' : '2px solid transparent',
+                  background: activeTab === tab.key ? 'rgba(255,255,255,0.05)' : 'transparent',
+                  color: activeTab === tab.key ? 'var(--color-accent)' : 'var(--color-text-muted)',
+                  borderBottom: activeTab === tab.key ? '2px solid var(--color-accent)' : '2px solid transparent',
                   marginBottom: -1,
                 }}
               >
@@ -526,9 +451,9 @@ export default function CrmContactDetail({ initialContact }) {
                   ['🎂 Birthday', contact.birthday ? formatDateDisplay(contact.birthday) : null],
                   ['⭐ Zodiac', getZodiacSign(contact.birthday)],
                 ].filter(([, v]) => v).map(([label, value]) => (
-                  <div key={label} style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
-                    <div style={{ fontSize: 11, color: '#666677', marginBottom: 4 }}>{label}</div>
-                    <div style={{ fontSize: 13, color: '#f0f0f0', fontWeight: 500, textTransform: label === '♂♀ Gender' || label === '💍 Relationship' ? 'capitalize' : 'none' }}>{value}</div>
+                  <div key={label} style={{ padding: '12px 14px', background: 'var(--color-bg-panel)', borderRadius: 10 }}>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 13, color: 'var(--color-text-main)', fontWeight: 500, textTransform: label === '♂♀ Gender' || label === '💍 Relationship' ? 'capitalize' : 'none' }}>{value}</div>
                   </div>
                 ))}
               </div>
@@ -537,13 +462,13 @@ export default function CrmContactDetail({ initialContact }) {
               {(() => {
                 const tags = (() => { try { const parsed = contact.tags ? JSON.parse(contact.tags) : []; return Array.isArray(parsed) ? parsed : []; } catch { return []; } })();
                 return tags.length > 0 ? (
-                  <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
-                    <div style={{ fontSize: 11, color: '#666677', marginBottom: 8 }}>🏷️ Tags</div>
+                  <div style={{ padding: '12px 14px', background: 'var(--color-bg-panel)', borderRadius: 10 }}>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 8 }}>🏷️ Tags</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {tags.map(tag => (
                         <span key={tag} style={{
                           padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                          background: 'rgba(255,51,102,0.12)', border: '1px solid rgba(255,51,102,0.25)', color: '#ff6688',
+                          background: 'var(--color-bg-panel-hover)', border: '1px solid var(--color-border)', color: 'var(--color-accent)',
                         }}>{tag}</span>
                       ))}
                     </div>
@@ -552,8 +477,8 @@ export default function CrmContactDetail({ initialContact }) {
               })()}
 
               {!contact.birthday && !contact.city && !contact.nation && !contact.occupation && !contact.gender && (
-                <div style={{ textAlign: 'center', color: '#555566', fontSize: 13, padding: '32px 0' }}>
-                  No overview data yet. Click <strong style={{ color: '#888899' }}>✏️ Edit Info</strong> to add details.
+                <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13, padding: '32px 0' }}>
+                  No overview data yet. Click <strong style={{ color: 'var(--color-text-muted)' }}>✏️ Edit Info</strong> to add details.
                 </div>
               )}
             </div>
@@ -568,11 +493,11 @@ export default function CrmContactDetail({ initialContact }) {
                   <div key={cat} style={{ marginBottom: 28 }}>
                     <SectionTitle>{cat === 'work' ? '💼 Work Experience' : '🎓 Education'}</SectionTitle>
                     {items.length === 0 ? (
-                      <div style={{ fontSize: 12, color: '#555566', padding: '8px 0' }}>No {cat} history added yet</div>
+                      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', padding: '8px 0' }}>No {cat} history added yet</div>
                     ) : (
                       <div style={{ position: 'relative', paddingLeft: 20 }}>
                         {/* Timeline line */}
-                        <div style={{ position: 'absolute', left: 7, top: 8, bottom: 8, width: 2, background: 'rgba(255,255,255,0.08)' }} />
+                        <div style={{ position: 'absolute', left: 7, top: 8, bottom: 8, width: 2, background: 'var(--color-glass-bg)' }} />
                         {items.map((h, idx) => (
                           <div key={h.id} style={{ position: 'relative', marginBottom: 20 }}>
                             {/* Dot */}
@@ -582,27 +507,27 @@ export default function CrmContactDetail({ initialContact }) {
                               border: '2px solid #14141e',
                             }} />
                             <div style={{
-                              padding: '12px 14px', background: 'rgba(255,255,255,0.03)',
+                              padding: '12px 14px', background: 'var(--color-bg-panel)',
                               borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)',
                             }}
                               className="group"
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                                 <div>
-                                  <div style={{ fontWeight: 700, fontSize: 14, color: '#f0f0f0' }}>{h.organization}</div>
-                                  {h.titleOrMajor && <div style={{ fontSize: 12, color: '#888899', marginTop: 2 }}>{h.titleOrMajor}</div>}
+                                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text-main)' }}>{h.organization}</div>
+                                  {h.titleOrMajor && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{h.titleOrMajor}</div>}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                                  <div style={{ fontSize: 11, color: '#666677', whiteSpace: 'nowrap' }}>
+                                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
                                     {h.startDate || '?'} — {h.endDate || 'Present'}
                                   </div>
                                   <button
                                     onClick={() => handleDeleteHistory(h.id)}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555566', fontSize: 12, padding: '2px 4px' }}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 12, padding: '2px 4px' }}
                                   >✕</button>
                                 </div>
                               </div>
-                              {h.description && <div style={{ fontSize: 12, color: '#888899', marginTop: 8, lineHeight: 1.5 }}>{h.description}</div>}
+                              {h.description && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8, lineHeight: 1.5 }}>{h.description}</div>}
                             </div>
                           </div>
                         ))}
@@ -614,8 +539,8 @@ export default function CrmContactDetail({ initialContact }) {
 
               {/* Add history form */}
               {showAddHistory ? (
-                <div style={{ padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div style={{ marginBottom: 10, fontSize: 12, fontWeight: 700, color: '#888899' }}>Add Experience</div>
+                <div style={{ padding: 16, background: 'var(--color-bg-panel)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ marginBottom: 10, fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)' }}>Add Experience</div>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <select value={newHistory.category} onChange={e => setNewHistory(h => ({ ...h, category: e.target.value }))} style={selectStyle}>
                       <option value="work">💼 Work</option>
@@ -646,18 +571,18 @@ export default function CrmContactDetail({ initialContact }) {
             <div>
               <SectionTitle>Social Network</SectionTitle>
               {allRelations.length === 0 && !showAddRelation && (
-                <div style={{ textAlign: 'center', color: '#555566', fontSize: 13, padding: '24px 0' }}>
+                <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13, padding: '24px 0' }}>
                   No connections linked yet.
                 </div>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                 {allRelations.map(rel => {
                   const p = rel.person;
-                  const relTier = TIER_CONFIG[p.tier] ?? TIER_CONFIG[3];
+                  const relTier = crmTiers[p.tier] ?? crmTiers[3];
                   return (
                     <div key={rel.id} style={{
                       display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                      background: 'rgba(255,255,255,0.03)', borderRadius: 10,
+                      background: 'var(--color-bg-panel)', borderRadius: 10,
                       border: '1px solid rgba(255,255,255,0.05)',
                     }}>
                       {/* Mini avatar */}
@@ -671,17 +596,17 @@ export default function CrmContactDetail({ initialContact }) {
                       </div>
                       <div style={{ flex: 1 }}>
                         <Link href={`/crm/${p.id}`} style={{
-                          fontWeight: 600, fontSize: 14, color: '#f0f0f0', textDecoration: 'none',
+                          fontWeight: 600, fontSize: 14, color: 'var(--color-text-main)', textDecoration: 'none',
                           transition: 'color 0.15s',
                         }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#ff3366'}
-                          onMouseLeave={e => e.currentTarget.style.color = '#f0f0f0'}
+                          onMouseEnter={e => e.currentTarget.style.color = 'var(--color-accent)'}
+                          onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-main)'}
                         >
                           {p.chineseName ? `${p.chineseName} (${p.fullName})` : p.fullName}
                         </Link>
-                        {rel.label && <div style={{ fontSize: 11, color: '#888899' }}>{rel.label}</div>}
+                        {rel.label && <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{rel.label}</div>}
                       </div>
-                      <button onClick={() => handleDeleteRelation(rel)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555566', fontSize: 12 }}>✕</button>
+                      <button onClick={() => handleDeleteRelation(rel)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 12 }}>✕</button>
                     </div>
                   );
                 })}
@@ -706,7 +631,7 @@ export default function CrmContactDetail({ initialContact }) {
               <SectionTitle>Interaction Log</SectionTitle>
 
               {(contact.interactions || []).length === 0 && !showAddInteraction && (
-                <div style={{ textAlign: 'center', color: '#555566', fontSize: 13, padding: '24px 0' }}>
+                <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13, padding: '24px 0' }}>
                   No interactions logged yet.
                 </div>
               )}
@@ -715,26 +640,26 @@ export default function CrmContactDetail({ initialContact }) {
                 {(contact.interactions || []).map(i => (
                   <div key={i.id} style={{
                     display: 'flex', gap: 12, padding: '12px 14px',
-                    background: 'rgba(255,255,255,0.03)', borderRadius: 10,
+                    background: 'var(--color-bg-panel)', borderRadius: 10,
                     border: '1px solid rgba(255,255,255,0.05)',
                   }}>
                     <div style={{ fontSize: 22, flexShrink: 0 }}>{INTERACTION_ICONS[i.type] || '💬'}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ fontSize: 12, color: '#888899' }}>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
                           {formatDateDisplay(i.date)}
-                          {i.type && <span style={{ marginLeft: 8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#666677' }}>{i.type}</span>}
+                          {i.type && <span style={{ marginLeft: 8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)' }}>{i.type}</span>}
                         </div>
-                        <button onClick={() => handleDeleteInteraction(i.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555566', fontSize: 12 }}>✕</button>
+                        <button onClick={() => handleDeleteInteraction(i.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 12 }}>✕</button>
                       </div>
-                      <div style={{ fontSize: 13, color: '#d0d0d8', marginTop: 4, lineHeight: 1.5 }}>{i.summary}</div>
+                      <div style={{ fontSize: 13, color: 'var(--color-text-main)', marginTop: 4, lineHeight: 1.5 }}>{i.summary}</div>
                     </div>
                   </div>
                 ))}
               </div>
 
               {showAddInteraction ? (
-                <div style={{ padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ padding: 16, background: 'var(--color-bg-panel)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <input type="date" value={newInteraction.date} onChange={e => setNewInteraction(i => ({ ...i, date: e.target.value }))} style={{ ...inputStyle, flex: 1, colorScheme: 'dark' }} />
                     <select value={newInteraction.type} onChange={e => setNewInteraction(i => ({ ...i, type: e.target.value }))} style={selectStyle}>
@@ -764,7 +689,7 @@ export default function CrmContactDetail({ initialContact }) {
             <div>
               <SectionTitle>Personal Notes</SectionTitle>
               <CrmNotes initialNote={notes} onSave={handleNotesChange} />
-              <div style={{ fontSize: 11, color: '#444455', marginTop: 8, textAlign: 'right' }}>Markdown · Auto-saves on blur</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 8, textAlign: 'right' }}>Markdown · Auto-saves on blur</div>
             </div>
           )}
         </div>
@@ -809,7 +734,7 @@ function RelationPicker({ contactId, onAdd, onCancel }) {
   };
 
   return (
-    <div style={{ padding: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div style={{ padding: 14, background: 'var(--color-bg-panel)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
       {!selected ? (
         <>
           <input
@@ -819,7 +744,7 @@ function RelationPicker({ contactId, onAdd, onCancel }) {
             onChange={e => handleQueryChange(e.target.value)}
             style={{ ...inputStyle, marginBottom: 8 }}
           />
-          {loading && <div style={{ fontSize: 12, color: '#888899' }}>Searching…</div>}
+          {loading && <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Searching…</div>}
           <div style={{ maxHeight: 180, overflowY: 'auto' }}>
             {results.map(c => (
               <div
@@ -832,13 +757,13 @@ function RelationPicker({ contactId, onAdd, onCancel }) {
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <div style={{ fontSize: 13, color: '#f0f0f0', fontWeight: 600 }}>
+                <div style={{ fontSize: 13, color: 'var(--color-text-main)', fontWeight: 600 }}>
                   {c.chineseName ? `${c.chineseName} (${c.fullName})` : c.fullName}
                 </div>
               </div>
             ))}
             {!loading && query && results.length === 0 && (
-              <div style={{ fontSize: 12, color: '#555566', padding: '8px 0' }}>No contacts found.</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', padding: '8px 0' }}>No contacts found.</div>
             )}
           </div>
           <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
@@ -847,7 +772,7 @@ function RelationPicker({ contactId, onAdd, onCancel }) {
         </>
       ) : (
         <>
-          <div style={{ fontSize: 13, color: '#f0f0f0', marginBottom: 10 }}>
+          <div style={{ fontSize: 13, color: 'var(--color-text-main)', marginBottom: 10 }}>
             Link with <strong>{selected.chineseName || selected.fullName}</strong>
           </div>
           <input
@@ -868,29 +793,30 @@ function RelationPicker({ contactId, onAdd, onCancel }) {
 
 // ─── Shared Inline Styles ─────────────────────────────────────────────────────
 const inputStyle = {
-  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: 8, color: '#f0f0f0', fontSize: 12, padding: '7px 10px',
+  background: 'var(--color-bg-panel-hover)', border: '1px solid var(--color-border)',
+  borderRadius: 8, color: 'var(--color-text-main)', fontSize: 12, padding: '7px 10px',
   outline: 'none', width: '100%', boxSizing: 'border-box',
   fontFamily: 'inherit', transition: 'border-color 0.2s',
 };
 
 const selectStyle = {
   ...{
-    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 8, color: '#f0f0f0', fontSize: 12, padding: '7px 10px',
+    background: 'var(--color-bg-panel-hover)', border: '1px solid var(--color-border)',
+    borderRadius: 8, color: 'var(--color-text-main)', fontSize: 12, padding: '7px 10px',
     outline: 'none', cursor: 'pointer', colorScheme: 'dark', fontFamily: 'inherit',
   },
 };
 
 const cancelBtnStyle = {
-  flex: 1, padding: '7px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)',
-  background: 'transparent', color: '#888899', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+  flex: 1, padding: '7px', borderRadius: 8, border: '1px solid var(--color-border)',
+  background: 'transparent', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
 };
 
 const saveBtnStyle = {
   flex: 2, padding: '7px', borderRadius: 8, border: 'none',
-  background: 'linear-gradient(135deg, #ff3366, #ff6b8a)',
-  color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+  background: 'var(--color-accent)',
+  color: '#fff',
+  border: 'none', fontSize: 12, fontWeight: 700,
 };
 
 // ─── CrmNotes ─ Dark-mode Tiptap Markdown Editor ────────────────────────────────
@@ -938,10 +864,10 @@ function CrmNotes({ initialNote, onSave }) {
           font-family: inherit;
         }
         .crm-notes-editor p { margin: 0.4em 0; }
-        .crm-notes-editor h1 { font-size: 1.4em; font-weight: 700; color: #f0f0f0; margin: 0.8em 0 0.4em; }
-        .crm-notes-editor h2 { font-size: 1.2em; font-weight: 700; color: #f0f0f0; margin: 0.7em 0 0.3em; }
-        .crm-notes-editor h3 { font-size: 1.05em; font-weight: 600; color: #e0e0ee; margin: 0.6em 0 0.3em; }
-        .crm-notes-editor strong { color: #ffffff; font-weight: 700; }
+        .crm-notes-editor h1 { font-size: 1.4em; font-weight: 700; color: var(--color-text-main); margin: 0.8em 0 0.4em; }
+        .crm-notes-editor h2 { font-size: 1.2em; font-weight: 700; color: var(--color-text-main); margin: 0.7em 0 0.3em; }
+        .crm-notes-editor h3 { font-size: 1.05em; font-weight: 600; color: var(--color-text-main); margin: 0.6em 0 0.3em; }
+        .crm-notes-editor strong { color: var(--color-text-main); font-weight: 700; }
         .crm-notes-editor em { color: #b0b0cc; }
         .crm-notes-editor code { background: rgba(255,255,255,0.1); border-radius: 4px; padding: 0.1em 0.4em; font-size: 0.9em; color: #4ecdc4; font-family: monospace; }
         .crm-notes-editor pre { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; margin: 8px 0; overflow-x: auto; }
@@ -955,11 +881,11 @@ function CrmNotes({ initialNote, onSave }) {
         .crm-is-empty::before { color: #444455; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
       `}</style>
       <div style={{
-        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--color-bg-panel)', border: '1px solid rgba(255,255,255,0.08)',
         borderRadius: 12, transition: 'border-color 0.2s', cursor: 'text',
       }}
         onFocus={e => e.currentTarget.style.borderColor = 'rgba(255,51,102,0.4)'}
-        onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
+        onBlur={e => e.currentTarget.style.borderColor = 'var(--color-glass-bg)'}
       >
         <EditorContent editor={editor} />
       </div>

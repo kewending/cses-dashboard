@@ -36,20 +36,20 @@ export default function DateSelectorDropdown({ baseDate, setBaseDate }) {
     <div className="relative z-50" ref={containerRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-dark)] text-white/90 rounded border border-white/10 hover:bg-white/10 text-sm font-semibold shadow-sm transition-colors"
+        className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-dark)] text-[var(--color-text-main)] rounded border border-[var(--color-border)] hover:bg-[var(--color-bg-panel-hover)] text-sm font-semibold shadow-sm transition-colors"
       >
         <span className="text-[12px]">📅</span> {formatRelativeDate(baseDate)}
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 left-0 w-64 bg-[#232323] rounded-lg shadow-2xl border border-white/10 z-50 py-2">
-          <button onClick={goToday} className="w-full text-left px-4 py-2 hover:bg-white/5 text-sm text-white/80 flex justify-between">
+        <div className="absolute top-full mt-2 left-0 w-64 bg-[#232323] rounded-lg shadow-2xl border border-[var(--color-border)] z-50 py-2">
+          <button onClick={goToday} className="w-full text-left px-4 py-2 hover:bg-[var(--color-bg-panel)] text-sm text-[var(--color-text-main)] flex justify-between">
             Go to today
           </button>
-          <button onClick={() => changeDate(1)} className="w-full text-left px-4 py-2 hover:bg-white/5 text-sm text-white/80 flex justify-between">
+          <button onClick={() => changeDate(1)} className="w-full text-left px-4 py-2 hover:bg-[var(--color-bg-panel)] text-sm text-[var(--color-text-main)] flex justify-between">
             Go to next day
           </button>
-          <button onClick={() => changeDate(-1)} className="w-full text-left px-4 py-2 hover:bg-white/5 text-sm text-white/80 flex justify-between border-b border-white/10 mb-2 pb-3">
+          <button onClick={() => changeDate(-1)} className="w-full text-left px-4 py-2 hover:bg-[var(--color-bg-panel)] text-sm text-[var(--color-text-main)] flex justify-between border-b border-[var(--color-border)] mb-2 pb-3">
             Go to previous day
           </button>
           <div className="px-4 pb-2">
@@ -62,7 +62,7 @@ export default function DateSelectorDropdown({ baseDate, setBaseDate }) {
                   setIsOpen(false);
                 }
               }}
-              className="w-full p-2 bg-[#2d2d2d] border border-white/10 rounded text-sm text-white/90 focus:outline-none focus:border-[var(--color-accent)] color-scheme-dark"
+              className="w-full p-2 bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-accent)] color-scheme-dark"
               style={{ colorScheme: 'dark' }}
             />
           </div>

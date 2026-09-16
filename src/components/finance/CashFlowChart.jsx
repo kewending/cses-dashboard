@@ -3,11 +3,13 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { safeFormatCurrency } from '@/lib/formatters';
+import { useSettings } from '@/lib/SettingsContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, startOfMonth, subMonths } from 'date-fns';
 
 export default function CashFlowChart({ transactions = [], exchangeRates = [] }) {
-  const baseCurrency = 'AUD'; // Fixed for now
+  const { settings } = useSettings();
+  const baseCurrency = settings.finance.baseCurrency;
 
   const getRate = (from, to) => {
     if (from === to) return 1;

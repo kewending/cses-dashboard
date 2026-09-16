@@ -25,17 +25,17 @@ export default function SortableTask({ task, session, isActiveTimer, activeTimer
     <div
       ref={setNodeRef}
       style={style}
-      className={`p-3 bg-[var(--color-bg-dark)] border ${isActiveTimer ? 'border-[var(--color-accent)] shadow-[0_0_15px_var(--color-accent)]/20' : 'border-white/10 hover:border-white/30'} ${task.isCompleted ? 'opacity-50' : ''} rounded-xl mb-3 group transition-all relative flex flex-col`}
+      className={`p-3 bg-[var(--color-bg-dark)] border ${isActiveTimer ? 'border-[var(--color-accent)] shadow-[0_0_15px_var(--color-accent)]/20' : 'border-[var(--color-border)] hover:border-[var(--color-border-hover)]'} ${task.isCompleted ? 'opacity-50' : ''} rounded-xl mb-3 group transition-all relative flex flex-col`}
     >
       <div className="flex justify-between items-start mb-2 relative">
         <div className="flex-1 flex gap-2 items-start cursor-grab active:cursor-grabbing mr-2 pb-1" {...attributes} {...listeners} onClick={() => onOpenDetail(task.id)}>
           <button
             onClick={(e) => { e.stopPropagation(); onToggleComplete(task.id); }}
-            className={`w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${task.isCompleted ? 'bg-green-500 border-green-500' : 'border-white/30 hover:border-white/60'}`}
+            className={`w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${task.isCompleted ? 'bg-green-500 border-green-500' : 'border-[var(--color-border-hover)] hover:border-white/60'}`}
           >
-            {task.isCompleted && <span className="text-white text-[10px]">✓</span>}
+            {task.isCompleted && <span className="text-[var(--color-text-main)] text-[10px]">✓</span>}
           </button>
-          <div className={`text-sm font-semibold leading-tight ${task.isCompleted ? 'text-white/50 line-through' : 'text-white'}`}>
+          <div className={`text-sm font-semibold leading-tight ${task.isCompleted ? 'text-[var(--color-text-muted)] line-through' : 'text-[var(--color-text-main)]'}`}>
             {session && (
               <span className="inline-block mr-2 text-[10px] bg-[#f2a950] text-black px-1.5 py-0.5 rounded font-bold align-middle mb-0.5">
                 {formatSessionTime(session.startMinutes)}
@@ -46,7 +46,7 @@ export default function SortableTask({ task, session, isActiveTimer, activeTimer
         </div>
         <button 
           onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}
-          className="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 mt-1"
+          className="text-[var(--color-text-muted)] opacity-50 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 mt-1"
           title="Delete Task"
         >
           🗑️
@@ -61,21 +61,21 @@ export default function SortableTask({ task, session, isActiveTimer, activeTimer
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <button
                   onClick={(e) => { e.stopPropagation(); onToggleSubtaskComplete(task.id, sub.id); }}
-                  className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${sub.isCompleted ? 'bg-green-500 border-green-500' : 'border-white/30 hover:border-white/60'}`}
+                  className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${sub.isCompleted ? 'bg-green-500 border-green-500' : 'border-[var(--color-border-hover)] hover:border-white/60'}`}
                 >
-                  {sub.isCompleted && <span className="text-white text-[8px]">✓</span>}
+                  {sub.isCompleted && <span className="text-[var(--color-text-main)] text-[8px]">✓</span>}
                 </button>
-                <span className={`text-xs truncate cursor-pointer ${sub.isCompleted ? 'text-white/40 line-through' : 'text-white/80'}`} onClick={(e) => { e.stopPropagation(); onOpenDetail(task.id); }}>
+                <span className={`text-xs truncate cursor-pointer ${sub.isCompleted ? 'text-[var(--color-text-muted)] opacity-70 line-through' : 'text-[var(--color-text-main)]'}`} onClick={(e) => { e.stopPropagation(); onOpenDetail(task.id); }}>
                   {sub.title}
                 </span>
               </div>
               <div className={`flex items-center gap-2 transition-opacity ${activeTimer?.id === sub.id && activeTimer?.type === 'subtask' ? 'opacity-100' : 'opacity-0 group-hover/sub:opacity-100'}`}>
-                <div className="text-[9px] font-mono text-white/40">
+                <div className="text-[9px] font-mono text-[var(--color-text-muted)] opacity-70">
                   {formatActualTime(sub.actualDurationSeconds)} / {formatMins(sub.plannedDurationMinutes)}
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); onToggleTimer(sub.id, 'subtask'); }}
-                  className={`w-4 h-4 rounded flex items-center justify-center text-[10px] ${activeTimer?.id === sub.id && activeTimer?.type === 'subtask' ? 'bg-red-500/20 text-red-500' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+                  className={`w-4 h-4 rounded flex items-center justify-center text-[10px] ${activeTimer?.id === sub.id && activeTimer?.type === 'subtask' ? 'bg-red-500/20 text-red-500' : 'bg-[var(--color-bg-panel-hover)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-panel-hover)]'}`}
                 >
                   {activeTimer?.id === sub.id && activeTimer?.type === 'subtask' ? '⏹' : '▶'}
                 </button>
@@ -85,7 +85,7 @@ export default function SortableTask({ task, session, isActiveTimer, activeTimer
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
+      <div className="flex items-center justify-between mt-auto pt-2 border-t border-[var(--color-border)]">
         <div className="flex items-center gap-2">
           <button
             onClick={(e) => {
@@ -107,7 +107,7 @@ export default function SortableTask({ task, session, isActiveTimer, activeTimer
           {task.tag && <span className="text-[10px] text-[var(--color-accent)] font-medium">#{task.tag}</span>}
         </div>
 
-        <div className={`text-[10px] font-mono px-2 py-0.5 rounded ${isOverTime ? 'bg-red-500/20 text-red-400' : 'bg-white/5 text-[var(--color-text-muted)]'}`}>
+        <div className={`text-[10px] font-mono px-2 py-0.5 rounded ${isOverTime ? 'bg-red-500/20 text-red-400' : 'bg-[var(--color-bg-panel)] text-[var(--color-text-muted)]'}`}>
           {actualFormatted} / {plannedFormatted}
         </div>
       </div>

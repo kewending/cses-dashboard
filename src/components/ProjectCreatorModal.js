@@ -34,7 +34,7 @@ export default function ProjectCreatorModal({ config, onClose, onCreate, objecti
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="absolute inset-0" onClick={onClose} />
-      <form onSubmit={handleSubmit} className="bg-white text-gray-800 rounded-xl shadow-2xl flex flex-col relative z-20 overflow-hidden w-[720px]">
+      <form onSubmit={handleSubmit} className="bg-[var(--color-bg-panel)] text-[var(--color-text-main)] rounded-xl shadow-2xl flex flex-col relative z-20 overflow-hidden w-[720px]">
         {/* Title input */}
         <input
           ref={inputRef}
@@ -43,14 +43,14 @@ export default function ProjectCreatorModal({ config, onClose, onCreate, objecti
           value={title}
           onChange={e => setTitle(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-          className="w-full bg-transparent border-none text-[18px] text-gray-800 placeholder-gray-400 focus:outline-none p-5 pb-3"
+          className="w-full bg-transparent border-none text-[18px] text-[var(--color-text-main)] placeholder-gray-400 focus:outline-none p-5 pb-3"
         />
 
         {/* Fields row — only Objective, Start, End */}
-        <div className="flex items-center gap-6 px-5 pb-4 pt-2 text-sm text-gray-500 font-medium border-t border-gray-100 mt-2">
+        <div className="flex items-center gap-6 px-5 pb-4 pt-2 text-sm text-[var(--color-text-muted)] font-medium border-t border-[var(--color-border)] mt-2">
 
           {/* Objective */}
-          <div className="flex items-center gap-1.5 hover:text-gray-800 transition-colors flex-shrink-0 mt-2">
+          <div className="flex items-center gap-1.5 hover:text-[var(--color-text-main)] transition-colors flex-shrink-0 mt-2">
             <span>🎯</span>
             <select
               value={objectiveId}
@@ -65,8 +65,8 @@ export default function ProjectCreatorModal({ config, onClose, onCreate, objecti
           </div>
 
           {/* Start Date */}
-          <div className="flex items-center gap-1.5 hover:text-gray-800 transition-colors flex-shrink-0 mt-2">
-            <span className="text-[11px] uppercase tracking-wider text-gray-400 mr-0.5">Start</span>
+          <div className="flex items-center gap-1.5 hover:text-[var(--color-text-main)] transition-colors flex-shrink-0 mt-2">
+            <span className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] mr-0.5">Start</span>
             <input
               type="date"
               value={startDate}
@@ -76,8 +76,8 @@ export default function ProjectCreatorModal({ config, onClose, onCreate, objecti
           </div>
 
           {/* End Date */}
-          <div className="flex items-center gap-1.5 hover:text-gray-800 transition-colors flex-shrink-0 mt-2">
-            <span className="text-[11px] uppercase tracking-wider text-gray-400 mr-0.5">End</span>
+          <div className="flex items-center gap-1.5 hover:text-[var(--color-text-main)] transition-colors flex-shrink-0 mt-2">
+            <span className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] mr-0.5">End</span>
             <input
               type="date"
               value={endDate}

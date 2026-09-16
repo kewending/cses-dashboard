@@ -29,20 +29,20 @@ const BASE_TRAIL_DAYS = 365;   // days after today shown at end
 // Dark theme tokens (inline styles where Tailwind is insufficient)
 // ─────────────────────────────────────────────────────────────────────────────
 const D = {
-  bg:           '#161616',
-  bgPanel:      '#1c1c1c',
-  bgHeader:     '#1e1e1e',
-  bgHover:      'rgba(255,255,255,0.05)',
-  border:       'rgba(255,255,255,0.1)',
-  borderSub:    'rgba(255,255,255,0.06)',
-  textPrimary:  'rgba(255,255,255,0.85)',
-  textSecond:   'rgba(255,255,255,0.65)',
-  textMuted:    'rgba(255,255,255,0.40)',
-  textFaint:    'rgba(255,255,255,0.25)',
-  weekendBg:    'rgba(255,255,255,0.03)',
-  divider:      'rgba(255,255,255,0.06)',
-  modalBg:      '#1a1a2e',
-  modalBorder:  'rgba(99,102,241,0.3)',
+  bg: 'var(--color-bg-dark)',
+  bgPanel: 'var(--color-bg-panel)',
+  bgHeader: 'var(--color-bg-panel)',
+  bgHover: 'var(--color-bg-panel-hover)',
+  border: 'var(--color-border)',
+  borderSub: 'var(--color-border)',
+  textPrimary: 'var(--color-text-main)',
+  textSecond: 'var(--color-text-main)',
+  textMuted: 'var(--color-text-muted)',
+  textFaint: 'var(--color-text-muted)',
+  weekendBg: 'var(--color-glass-bg)',
+  divider: 'var(--color-border)',
+  modalBg: 'var(--color-bg-panel)',
+  modalBorder: 'var(--color-border)',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -165,7 +165,7 @@ function InlineModal({ title, icon, children, onClose }) {
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+        backgroundColor: 'var(--color-glass-bg)', backdropFilter: 'blur(4px)',
       }}
       onClick={onClose}
     >
@@ -199,13 +199,13 @@ function InlineModal({ title, icon, children, onClose }) {
             onClick={onClose}
             style={{
               width: 28, height: 28, borderRadius: 8,
-              background: 'rgba(255,255,255,0.08)', border: 'none',
+              background: 'var(--color-glass-bg)', border: 'none',
               color: D.textMuted, cursor: 'pointer', fontSize: 16,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.14)'; e.currentTarget.style.color = D.textPrimary; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = D.textMuted; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-bg-panel-hover)'; e.currentTarget.style.color = D.textPrimary; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-glass-bg)'; e.currentTarget.style.color = D.textMuted; }}
           >✕</button>
         </div>
         {/* Body */}
@@ -671,7 +671,7 @@ export default function GanttView({
                     style={{
                       width: pxPerDay,
                       borderRight: `1px solid ${D.borderSub}`,
-                      backgroundColor: day.isWeekend ? 'rgba(255,255,255,0.02)' : 'transparent',
+                      backgroundColor: day.isWeekend ? 'var(--color-glass-bg)' : 'transparent',
                     }}
                   >
                     {pxPerDay >= 22 ? (
@@ -768,7 +768,7 @@ export default function GanttView({
                           : row.type === 'subproject' ? 500 : 400,
                         color: row.type === 'objective' ? D.textPrimary
                           : row.type === 'project' ? D.textSecond
-                          : row.type === 'subproject' ? 'rgba(255,255,255,0.58)'
+                          : row.type === 'subproject' ? 'var(--color-text-muted)'
                           : D.textMuted,
                         cursor: row.type === 'objective' && row.isVirtual ? 'default' : 'pointer',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -786,7 +786,7 @@ export default function GanttView({
                       onMouseLeave={e => {
                         e.currentTarget.style.color = row.type === 'objective' ? D.textPrimary
                           : row.type === 'project' ? D.textSecond
-                          : row.type === 'subproject' ? 'rgba(255,255,255,0.58)'
+                          : row.type === 'subproject' ? 'var(--color-text-muted)'
                           : D.textMuted;
                       }}
                     >
@@ -900,7 +900,7 @@ export default function GanttView({
                           position: 'absolute',
                           left: isTask ? 4 : 9, right: isTask ? 4 : 9,
                           fontSize: 10, fontWeight: 600,
-                          color: 'rgba(255,255,255,0.93)',
+                          color: 'var(--color-text-main)',
                           overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
                           pointerEvents: 'none',
                         }}
@@ -1038,7 +1038,7 @@ export default function GanttView({
                         border: `1px solid ${D.borderSub}`,
                         cursor: 'pointer', transition: 'all 0.15s',
                       }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--color-glass-bg)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
                     >
                       <span style={{ fontSize: 14 }}>📁</span>

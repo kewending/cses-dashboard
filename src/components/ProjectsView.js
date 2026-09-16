@@ -79,20 +79,20 @@ function SortableProjectCard({ project, allProjects, allTasks, onDelete, onOpenD
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-[var(--color-bg-panel)] border border-white/10 p-4 rounded-xl flex flex-col gap-3 hover:border-white/20 transition-colors mb-3 relative group`}
+      className={`bg-[var(--color-bg-panel)] border border-[var(--color-border)] p-4 rounded-xl flex flex-col gap-3 hover:border-[var(--color-border-hover)] transition-colors mb-3 relative group`}
     >
       {project.objective && (
-        <div className="absolute -top-2 left-2 z-10 bg-gray-800 text-[10px] px-2 py-0.5 rounded-md border border-gray-600 text-gray-300 shadow-sm">
+        <div className="absolute -top-2 left-2 z-10 bg-[var(--color-bg-panel)] text-[10px] px-2 py-0.5 rounded-md border border-[var(--color-border)] text-[var(--color-text-muted)] shadow-sm">
           🎯 {project.objective.title}
         </div>
       )}
       <div className="flex justify-between items-start gap-2 relative">
         <div className="flex-1 flex items-start cursor-grab active:cursor-grabbing mr-2 pb-1" {...attributes} {...listeners} onClick={() => onOpenDetail(project.id)}>
-          <h4 className="text-white font-medium text-[15px] leading-tight">{project.title}</h4>
+          <h4 className="text-[var(--color-text-main)] font-medium text-[15px] leading-tight">{project.title}</h4>
         </div>
         <button 
           onClick={(e) => { e.stopPropagation(); onDelete(project.id); }}
-          className="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 mt-0.5"
+          className="text-[var(--color-text-muted)] opacity-50 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 mt-0.5"
           title="Delete Project"
         >
           🗑️
@@ -100,14 +100,14 @@ function SortableProjectCard({ project, allProjects, allTasks, onDelete, onOpenD
       </div>
 
       <div className="flex flex-col gap-1 mt-auto">
-        <div className="flex justify-between text-[11px] text-gray-500 font-bold uppercase tracking-wider">
+        <div className="flex justify-between text-[11px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider">
           <span>Progress</span>
           <span>{progress}%</span>
         </div>
-        <div className="w-full bg-black/40 h-1.5 rounded-full overflow-hidden">
+        <div className="w-full bg-[var(--color-bg-dark)] h-1.5 rounded-full overflow-hidden">
           <div className="bg-green-500 h-full transition-all" style={{ width: `${progress}%` }} />
         </div>
-        <div className="text-[11px] text-gray-500 mt-1">
+        <div className="text-[11px] text-[var(--color-text-muted)] mt-1">
           {completedCount} / {totalCount} {progressLabel}
         </div>
       </div>
@@ -117,13 +117,13 @@ function SortableProjectCard({ project, allProjects, allTasks, onDelete, onOpenD
 
 function ObjectiveCard({ objective, projects, onDelete, onOpenDetail }) {
   return (
-    <div onClick={() => onOpenDetail && onOpenDetail(objective.id)} className="border border-white/10 bg-black/20 px-4 py-3 rounded-xl flex justify-between items-center hover:border-white/20 transition-colors group cursor-pointer">
-      <h3 className="font-bold text-white/90 text-[14px]">{objective.title}</h3>
+    <div onClick={() => onOpenDetail && onOpenDetail(objective.id)} className="border border-[var(--color-border)] bg-[var(--color-bg-panel)] px-4 py-3 rounded-xl flex justify-between items-center hover:border-[var(--color-border-hover)] transition-colors group cursor-pointer">
+      <h3 className="font-bold text-[var(--color-text-main)] text-[14px]">{objective.title}</h3>
       <div className="flex items-center gap-2">
-        <span className="text-[11px] text-gray-500 font-mono bg-white/5 px-2 py-1 rounded">{projects.length} Proj</span>
+        <span className="text-[11px] text-[var(--color-text-muted)] font-mono bg-[var(--color-bg-panel)] px-2 py-1 rounded">{projects.length} Proj</span>
         <button 
           onClick={(e) => { e.stopPropagation(); onDelete(objective.id); }}
-          className="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+          className="text-[var(--color-text-muted)] opacity-50 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
           title="Delete Objective"
         >
           🗑️
@@ -140,10 +140,10 @@ function SortableColumn({ status, title, projects, allProjects, allTasks, addUI,
   });
 
   return (
-    <div className="flex-1 min-w-[200px] bg-[rgba(255,255,255,0.02)] border border-white/5 rounded-2xl flex flex-col overflow-hidden p-2">
-      <div className="px-3 py-3 flex items-center justify-between font-semibold text-white/90">
+    <div className="flex-1 min-w-[200px] bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-2xl flex flex-col overflow-hidden p-2">
+      <div className="px-3 py-3 flex items-center justify-between font-semibold text-[var(--color-text-main)]">
         <div className="text-[15px]">{title}</div>
-        <div className="text-[11px] font-mono px-2 py-1 rounded bg-white/10 text-white/60">
+        <div className="text-[11px] font-mono px-2 py-1 rounded bg-[var(--color-bg-panel-hover)] text-[var(--color-text-muted)]">
           {projects.length}
         </div>
       </div>
@@ -300,10 +300,10 @@ export default function ProjectsView({
     const detailProjectParent = detailProject.parentProjectId ? projects.find(p => p.id === detailProject.parentProjectId) : null;
 
     return (
-      <div className="flex flex-col h-full max-w-4xl mx-auto w-full pt-6 relative text-[#333]">
-        <div className="flex items-center justify-between w-full mb-8 text-xs font-semibold text-gray-400 relative z-[90]">
+      <div className="flex flex-col h-full max-w-4xl mx-auto w-full pt-6 relative text-[var(--color-text-main)]">
+        <div className="flex items-center justify-between w-full mb-8 text-xs font-semibold text-[var(--color-text-muted)] relative z-[90]">
           <div className="flex flex-col items-start gap-1">
-            <span className="text-[9px] uppercase tracking-widest text-gray-400 pl-1">Objective</span>
+            <span className="text-[9px] uppercase tracking-widest text-[var(--color-text-muted)] pl-1">Objective</span>
             <select
               value={detailProject.objectiveId || ''}
               disabled={isSub}
@@ -311,7 +311,7 @@ export default function ProjectsView({
                 setProjects(prev => prev.map(p => p.id === detailProject.id ? { ...p, objectiveId: e.target.value || null } : p));
                 updateProject(detailProject.id, { objectiveId: e.target.value || null });
               }}
-              className="bg-transparent border-none focus:outline-none text-gray-800 text-[13px] w-32 truncate"
+              className="bg-transparent border-none focus:outline-none text-[var(--color-text-main)] text-[13px] w-32 truncate"
             >
               <option value="">None</option>
               {objectives.map(o => <option key={o.id} value={o.id}>{o.title}</option>)}
@@ -319,21 +319,21 @@ export default function ProjectsView({
           </div>
           
           <div className="flex gap-2 items-center shrink-0">
-            <div className="flex gap-1 items-center hover:bg-gray-100 px-2 py-1.5 rounded transition-colors shrink-0">
+            <div className="flex gap-1 items-center hover:bg-[var(--color-bg-panel-hover)] px-2 py-1.5 rounded transition-colors shrink-0">
               <select
                 value={detailProject.status}
                 onChange={(e) => {
                   setProjects(prev => prev.map(p => p.id === detailProject.id ? { ...p, status: e.target.value } : p));
                   updateProject(detailProject.id, { status: e.target.value });
                 }}
-                className="bg-transparent border-none focus:outline-none cursor-pointer text-gray-600 text-[13px]"
+                className="bg-transparent border-none focus:outline-none cursor-pointer text-[var(--color-text-main)] text-[13px]"
               >
                 {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
               </select>
             </div>
             
-            <div className="flex flex-col items-start leading-none gap-1 hover:bg-gray-100 px-2 py-1 rounded transition-colors -mt-1 shrink-0">
-              <span className="text-[9px] uppercase tracking-widest text-gray-400">Start</span>
+            <div className="flex flex-col items-start leading-none gap-1 hover:bg-[var(--color-bg-panel-hover)] px-2 py-1 rounded transition-colors -mt-1 shrink-0">
+              <span className="text-[9px] uppercase tracking-widest text-[var(--color-text-muted)]">Start</span>
               <input
                 type="date"
                 value={detailProject.startDate || ''}
@@ -341,12 +341,12 @@ export default function ProjectsView({
                   setProjects(prev => prev.map(p => p.id === detailProject.id ? { ...p, startDate: e.target.value } : p));
                   updateProject(detailProject.id, { startDate: e.target.value || null });
                 }}
-                className="bg-transparent border-none focus:outline-none text-gray-800 w-[105px] text-[13px] cursor-pointer"
+                className="bg-transparent border-none focus:outline-none text-[var(--color-text-main)] w-[105px] text-[13px] cursor-pointer"
               />
             </div>
             
-            <div className="flex flex-col items-start leading-none gap-1 hover:bg-gray-100 px-2 py-1 rounded transition-colors -mt-1 shrink-0">
-              <span className="text-[9px] uppercase tracking-widest text-gray-400">End</span>
+            <div className="flex flex-col items-start leading-none gap-1 hover:bg-[var(--color-bg-panel-hover)] px-2 py-1 rounded transition-colors -mt-1 shrink-0">
+              <span className="text-[9px] uppercase tracking-widest text-[var(--color-text-muted)]">End</span>
               <input
                 type="date"
                 value={detailProject.endDate || ''}
@@ -354,13 +354,13 @@ export default function ProjectsView({
                   setProjects(prev => prev.map(p => p.id === detailProject.id ? { ...p, endDate: e.target.value } : p));
                   updateProject(detailProject.id, { endDate: e.target.value || null });
                 }}
-                className="bg-transparent border-none focus:outline-none text-gray-800 w-[105px] text-[13px] cursor-pointer"
+                className="bg-transparent border-none focus:outline-none text-[var(--color-text-main)] w-[105px] text-[13px] cursor-pointer"
               />
             </div>
 
             <button
               onClick={() => setIsFocusMode(!isFocusMode)}
-              className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors text-lg ${isFocusMode ? 'bg-gray-200 text-gray-800' : 'text-gray-400 hover:bg-gray-100'}`}
+              className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors text-lg ${isFocusMode ? 'bg-[var(--color-bg-panel-hover)] text-[var(--color-text-main)]' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-panel-hover)]'}`}
               title="Focus Mode"
             >
               ⤢
@@ -377,25 +377,25 @@ export default function ProjectsView({
             ? Math.round((actualSeconds / (plannedMinutes * 60)) * 100)
             : null;
           return (
-            <div className="flex items-center gap-5 mt-3 mb-1 px-1 py-2.5 bg-gray-50 border border-gray-100 rounded-xl">
+            <div className="flex items-center gap-5 mt-3 mb-1 px-1 py-2.5 bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-xl">
               <div className="flex flex-col items-center flex-1">
-                <span className="text-[9px] uppercase tracking-widest text-gray-400 mb-0.5">Time Spent</span>
-                <span className={`text-sm font-mono font-semibold ${actualSeconds > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                <span className="text-[9px] uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5">Time Spent</span>
+                <span className={`text-sm font-mono font-semibold ${actualSeconds > 0 ? 'text-green-600' : 'text-[var(--color-text-muted)]'}`}>
                   {actualSeconds > 0 ? formatActualTime(actualSeconds) : '--'}
                 </span>
               </div>
-              <div className="w-px h-6 bg-gray-200" />
+              <div className="w-px h-6 bg-[var(--color-bg-panel-hover)]" />
               <div className="flex flex-col items-center flex-1">
-                <span className="text-[9px] uppercase tracking-widest text-gray-400 mb-0.5">Estimated</span>
-                <span className="text-sm font-mono font-semibold text-gray-500">
+                <span className="text-[9px] uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5">Estimated</span>
+                <span className="text-sm font-mono font-semibold text-[var(--color-text-muted)]">
                   {formatMins(plannedMinutes)}
                 </span>
               </div>
               {efficiencyPct !== null && actualSeconds > 0 && (
                 <>
-                  <div className="w-px h-6 bg-gray-200" />
+                  <div className="w-px h-6 bg-[var(--color-bg-panel-hover)]" />
                   <div className="flex flex-col items-center flex-1">
-                    <span className="text-[9px] uppercase tracking-widest text-gray-400 mb-0.5">Used</span>
+                    <span className="text-[9px] uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5">Used</span>
                     <span className={`text-sm font-mono font-semibold ${
                       efficiencyPct <= 100 ? 'text-green-600' : 'text-orange-500'
                     }`}>
@@ -410,11 +410,11 @@ export default function ProjectsView({
 
         {/* Breadcrumb */}
         {(detailProjectObjective || detailProjectParent) && (
-          <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 mt-2 mb-[-1.5rem] px-1">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[var(--color-text-muted)] mt-2 mb-[-1.5rem] px-1">
             {detailProjectObjective && (
               <>
                 <span 
-                  className="text-gray-400 cursor-pointer hover:text-gray-600 transition-colors"
+                  className="text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-main)] transition-colors"
                   onClick={() => {
                     setDetailProjectId(null);
                     setDetailObjectiveId(detailProjectObjective.id);
@@ -422,13 +422,13 @@ export default function ProjectsView({
                 >
                   🎯 {detailProjectObjective.title}
                 </span>
-                {detailProjectParent && <span className="text-gray-300">/</span>}
+                {detailProjectParent && <span className="text-[var(--color-text-muted)]">/</span>}
               </>
             )}
             {detailProjectParent && (
               <>
                 <span 
-                  className="text-gray-400 cursor-pointer hover:text-gray-600 transition-colors"
+                  className="text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-main)] transition-colors"
                   onClick={() => {
                     setDetailProjectId(detailProjectParent.id);
                   }}
@@ -447,20 +447,20 @@ export default function ProjectsView({
             value={detailProject.title}
             onChange={(e) => setProjects(prev => prev.map(p => p.id === detailProject.id ? { ...p, title: e.target.value } : p))}
             onBlur={(e) => updateProject(detailProject.id, { title: e.target.value })}
-            className="bg-transparent text-4xl font-bold focus:outline-none flex-1 min-w-0 text-gray-800"
+            className="bg-transparent text-4xl font-bold focus:outline-none flex-1 min-w-0 text-[var(--color-text-main)]"
             placeholder="Project Title"
           />
           
           <div className="flex items-center gap-3 ml-4 shrink-0">
-            <div className="flex flex-col items-end gap-1 text-sm font-semibold text-gray-500">
+            <div className="flex flex-col items-end gap-1 text-sm font-semibold text-[var(--color-text-muted)]">
               <span>{progressStr}</span>
-              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
+              <div className="w-32 h-2 bg-[var(--color-bg-panel-hover)] rounded-full overflow-hidden mt-1">
                  <div className="h-full bg-green-500 transition-all" style={{width: `${progressPercent}%`}} />
               </div>
             </div>
             <button
               onClick={() => handleDeleteProject(detailProject.id)}
-              className="w-8 h-8 rounded-md flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+              className="w-8 h-8 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-50 transition-colors"
               title="Delete Project"
             >
               🗑️
@@ -471,30 +471,30 @@ export default function ProjectsView({
         <div className="mb-8">
            { (isParent || (!isParent && !isSub && liveTasks.length === 0)) && (
               <div className="mb-6">
-                <h3 className="font-bold text-gray-600 mb-2">Subprojects</h3>
+                <h3 className="font-bold text-[var(--color-text-main)] mb-2">Subprojects</h3>
                 <div className="flex flex-col gap-1.5">
                   {liveSubprojects.map(sub => (
-                    <div key={sub.id} className="group flex items-center gap-2 p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-gray-300 transition-colors">
+                    <div key={sub.id} className="group flex items-center gap-2 p-2.5 bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg shadow-sm hover:border-[var(--color-border-hover)] transition-colors">
                       {/* Drag handle */}
-                      <span className="cursor-grab active:cursor-grabbing text-gray-200 hover:text-gray-400 flex-shrink-0 select-none text-lg leading-none">⠿</span>
+                      <span className="cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] hover:text-[var(--color-text-muted)] flex-shrink-0 select-none text-lg leading-none">⠿</span>
 
                       {/* Title — clickable to drill in */}
                       <span
-                        className="flex-1 font-medium text-[14px] text-gray-800 hover:text-gray-600 cursor-pointer"
+                        className="flex-1 font-medium text-[14px] text-[var(--color-text-main)] hover:text-[var(--color-text-main)] cursor-pointer"
                         onClick={() => setDetailProjectId(sub.id)}
                       >
                         {sub.title}
                       </span>
 
                       {/* Status badge */}
-                      <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0">
+                      <span className="text-[10px] font-bold text-[var(--color-text-muted)] bg-[var(--color-bg-panel-hover)] px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0">
                         {sub.status}
                       </span>
 
                       {/* Delete button */}
                       <button
                         onClick={() => handleDeleteProject(sub.id)}
-                        className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-500 transition-all flex-shrink-0"
+                        className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 transition-all flex-shrink-0"
                         title="Delete subproject"
                       >
                         ✕
@@ -509,7 +509,7 @@ export default function ProjectsView({
                       });
                       setShowProjectCreator(true);
                     }}
-                    className="mt-2 text-sm font-semibold text-gray-400 hover:text-gray-800 hover:border-gray-400 border-2 border-dashed border-gray-200 rounded-lg p-2 text-center transition-colors"
+                    className="mt-2 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:border-[var(--color-border-hover)] border-2 border-dashed border-[var(--color-border)] rounded-lg p-2 text-center transition-colors"
                   >
                     + Add Subproject
                   </button>
@@ -519,14 +519,14 @@ export default function ProjectsView({
            
            { (isSub || (!isParent && !isSub && liveSubprojects.length === 0)) && (
               <div>
-                <h3 className="font-bold text-gray-600 mb-2">Tasks</h3>
+                <h3 className="font-bold text-[var(--color-text-main)] mb-2">Tasks</h3>
                 <div className="flex flex-col gap-1.5">
                   {liveTasks.map(task => {
                     const allSubsDone = task.subtasks?.length > 0 && task.subtasks.every(s => s.isCompleted);
                     return (
-                      <div key={task.id} className="group flex items-center gap-2 p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-gray-300 transition-colors">
+                      <div key={task.id} className="group flex items-center gap-2 p-2.5 bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg shadow-sm hover:border-[var(--color-border-hover)] transition-colors">
                         {/* Drag handle */}
-                        <span className="cursor-grab active:cursor-grabbing text-gray-200 hover:text-gray-400 flex-shrink-0 select-none text-lg leading-none">⠿</span>
+                        <span className="cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] hover:text-[var(--color-text-muted)] flex-shrink-0 select-none text-lg leading-none">⠿</span>
 
                         {/* Checkbox */}
                         <button
@@ -556,7 +556,7 @@ export default function ProjectsView({
                             }
                           }}
                           className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                            task.isCompleted ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-green-400'
+                            task.isCompleted ? 'bg-green-500 border-green-500 text-[var(--color-text-main)]' : 'border-[var(--color-border-hover)] hover:border-green-400'
                           }`}
                         >
                           {task.isCompleted && <span className="text-[10px] font-bold">✓</span>}
@@ -565,7 +565,7 @@ export default function ProjectsView({
                         {/* Task title — clickable */}
                         <span
                           className={`flex-1 font-medium text-[14px] cursor-pointer ${
-                            task.isCompleted ? 'line-through text-gray-400' : 'text-gray-800 hover:text-gray-600'
+                            task.isCompleted ? 'line-through text-[var(--color-text-muted)]' : 'text-[var(--color-text-main)] hover:text-[var(--color-text-main)]'
                           }`}
                           onClick={() => onOpenTask && onOpenTask(task.id)}
                         >
@@ -574,7 +574,7 @@ export default function ProjectsView({
 
                         {/* Subtask count badge */}
                         {task.subtasks?.length > 0 && (
-                          <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] font-mono text-[var(--color-text-muted)] bg-[var(--color-bg-panel-hover)] px-1.5 py-0.5 rounded">
                             {task.subtasks.filter(s => s.isCompleted).length}/{task.subtasks.length}
                           </span>
                         )}
@@ -585,7 +585,7 @@ export default function ProjectsView({
                             if (deleteTask) deleteTask(task.id);
                             if (setTasks) setTasks(prev => prev.filter(t => t.id !== task.id));
                           }}
-                          className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-500 transition-all flex-shrink-0"
+                          className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 transition-all flex-shrink-0"
                           title="Delete task"
                         >
                           ✕
@@ -597,7 +597,7 @@ export default function ProjectsView({
                     onClick={() => {
                       if (onAddTaskClick) onAddTaskClick({ projectId: detailProject.id, status: 'inbox', dateStr: null });
                     }}
-                    className="mt-2 text-sm font-semibold text-gray-400 hover:text-gray-800 hover:border-gray-400 border-2 border-dashed border-gray-200 rounded-lg p-2 text-center transition-colors"
+                    className="mt-2 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:border-[var(--color-border-hover)] border-2 border-dashed border-[var(--color-border)] rounded-lg p-2 text-center transition-colors"
                   >
                     + Add Task
                   </button>
@@ -606,8 +606,8 @@ export default function ProjectsView({
            )}
         </div>
         
-        <div className="flex-1 min-h-0 flex flex-col mt-auto border-t border-gray-100 pt-6">
-          <h3 className="font-bold text-gray-600 mb-2">Description</h3>
+        <div className="flex-1 min-h-0 flex flex-col mt-auto border-t border-[var(--color-border)] pt-6">
+          <h3 className="font-bold text-[var(--color-text-main)] mb-2">Description</h3>
           <TaskNotes
             initialNote={detailProject.description}
             onSave={(note) => {
@@ -631,22 +631,22 @@ export default function ProjectsView({
     const progressPercent = total === 0 ? 0 : Math.round((completed / total) * 100);
 
     return (
-      <div className="flex flex-col h-full max-w-4xl mx-auto w-full pt-6 relative text-[#333]">
+      <div className="flex flex-col h-full max-w-4xl mx-auto w-full pt-6 relative text-[var(--color-text-main)]">
         {/* Top bar: focus + delete */}
-        <div className="flex items-center justify-end gap-2 w-full mb-8 text-xs font-semibold text-gray-400 relative z-[90]">
+        <div className="flex items-center justify-end gap-2 w-full mb-8 text-xs font-semibold text-[var(--color-text-muted)] relative z-[90]">
           <button
             onClick={() => {
               handleDeleteObjective(detailObjective.id);
               setDetailObjectiveId(null);
             }}
-            className="w-8 h-8 rounded-md flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+            className="w-8 h-8 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-50 transition-colors"
             title="Delete Objective"
           >
             🗑️
           </button>
           <button
             onClick={() => setIsFocusMode(!isFocusMode)}
-            className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors text-lg ${isFocusMode ? 'bg-gray-200 text-gray-800' : 'text-gray-400 hover:bg-gray-100'}`}
+            className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors text-lg ${isFocusMode ? 'bg-[var(--color-bg-panel-hover)] text-[var(--color-text-main)]' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-panel-hover)]'}`}
             title="Focus Mode"
           >
             ⤢
@@ -661,26 +661,26 @@ export default function ProjectsView({
                value={detailObjective.title}
                onChange={(e) => setObjectives(prev => prev.map(o => o.id === detailObjective.id ? { ...o, title: e.target.value } : o))}
                onBlur={(e) => updateObjective && updateObjective(detailObjective.id, { title: e.target.value })}
-               className="bg-transparent text-4xl font-bold focus:outline-none flex-1 min-w-0 text-gray-800"
+               className="bg-transparent text-4xl font-bold focus:outline-none flex-1 min-w-0 text-[var(--color-text-main)]"
                placeholder="Objective Title"
              />
           </div>
           
-          <div className="flex flex-col items-end gap-1 ml-4 text-sm font-semibold text-gray-500 shrink-0">
+          <div className="flex flex-col items-end gap-1 ml-4 text-sm font-semibold text-[var(--color-text-muted)] shrink-0">
             <span>{progressStr}</span>
-            <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
+            <div className="w-32 h-2 bg-[var(--color-bg-panel-hover)] rounded-full overflow-hidden mt-1">
                <div className="h-full bg-green-500 transition-all" style={{width: `${progressPercent}%`}} />
             </div>
           </div>
         </div>
         
         <div className="mb-8">
-            <h3 className="font-bold text-gray-600 mb-2">Projects</h3>
+            <h3 className="font-bold text-[var(--color-text-main)] mb-2">Projects</h3>
             <div className="flex flex-col gap-2">
               {liveProjects.map(proj => (
-                <div key={proj.id} className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm flex justify-between items-center hover:border-gray-300 cursor-pointer" onClick={() => { setDetailObjectiveId(null); setDetailProjectId(proj.id); }}>
-                  <span className="font-medium text-gray-800">{proj.title}</span>
-                  <span className="text-xs text-gray-400 font-bold">{proj.status}</span>
+                <div key={proj.id} className="p-3 bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg shadow-sm flex justify-between items-center hover:border-[var(--color-border-hover)] cursor-pointer" onClick={() => { setDetailObjectiveId(null); setDetailProjectId(proj.id); }}>
+                  <span className="font-medium text-[var(--color-text-main)]">{proj.title}</span>
+                  <span className="text-xs text-[var(--color-text-muted)] font-bold">{proj.status}</span>
                 </div>
               ))}
               <button 
@@ -691,15 +691,15 @@ export default function ProjectsView({
                     setProjects(prev => [...prev, newP]);
                   }
                 }}
-                className="mt-2 text-sm font-semibold text-gray-400 hover:text-gray-800 hover:border-gray-400 border-2 border-dashed border-gray-200 rounded-lg p-2 text-center transition-colors"
+                className="mt-2 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:border-[var(--color-border-hover)] border-2 border-dashed border-[var(--color-border)] rounded-lg p-2 text-center transition-colors"
               >
                 + Add Project
               </button>
             </div>
         </div>
         
-        <div className="flex-1 min-h-0 flex flex-col mt-auto border-t border-gray-100 pt-6">
-          <h3 className="font-bold text-gray-600 mb-2">Description</h3>
+        <div className="flex-1 min-h-0 flex flex-col mt-auto border-t border-[var(--color-border)] pt-6">
+          <h3 className="font-bold text-[var(--color-text-main)] mb-2">Description</h3>
           <TaskNotes
             initialNote={detailObjective.description}
             onSave={(note) => {
@@ -717,8 +717,8 @@ export default function ProjectsView({
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex-1 flex gap-4 overflow-hidden h-full">
 
-          <div className="flex-1 min-w-[220px] bg-[rgba(255,255,255,0.02)] border border-white/5 rounded-2xl flex flex-col overflow-hidden p-2">
-            <div className="px-3 py-3 flex items-center justify-between font-semibold text-white/90">
+          <div className="flex-1 min-w-[220px] bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-2xl flex flex-col overflow-hidden p-2">
+            <div className="px-3 py-3 flex items-center justify-between font-semibold text-[var(--color-text-main)]">
               <div className="text-[15px] flex items-center gap-2">🎯 Objectives</div>
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-6">
@@ -737,7 +737,7 @@ export default function ProjectsView({
                 {!isAddingObjective ? (
                   <button
                     onClick={() => setIsAddingObjective(true)}
-                    className="w-full text-left px-3 py-2 rounded-lg border border-transparent hover:bg-white/5 text-[13px] text-white/50 hover:text-white/80 transition-colors flex items-center gap-2 mt-1"
+                    className="w-full text-left px-3 py-2 rounded-lg border border-transparent hover:bg-[var(--color-bg-panel)] text-[13px] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]/80 transition-colors flex items-center gap-2 mt-1"
                   >
                     <span className="text-lg leading-none">+</span> Add objective
                   </button>
@@ -765,7 +765,7 @@ export default function ProjectsView({
                       onBlur={() => {
                         if (!newObjectiveTitle.trim()) setIsAddingObjective(false);
                       }}
-                      className="flex-1 bg-[#2d2d2d] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/30"
+                      className="flex-1 bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-border-hover)]"
                     />
                   </form>
                 )}
@@ -794,7 +794,7 @@ export default function ProjectsView({
                         setProjectCreatorConfig({ status: 'BACKLOG', objectiveId: actualObjectiveId });
                         setShowProjectCreator(true);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg border border-transparent hover:bg-white/5 text-[13px] text-white/50 hover:text-white/80 transition-colors flex items-center gap-2 mb-2"
+                      className="w-full text-left px-3 py-2 rounded-lg border border-transparent hover:bg-[var(--color-bg-panel)] text-[13px] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]/80 transition-colors flex items-center gap-2 mb-2"
                     >
                       <span className="text-lg leading-none">+</span> Add Project
                     </button>
@@ -813,12 +813,12 @@ export default function ProjectsView({
       {/* PROJECT DETAIL OVERLAY */}
       {detailProjectId && !isFocusMode && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in" onPointerDown={() => setDetailProjectId(null)}>
-          <div className="bg-[#fcfcfc] border border-gray-200 w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden relative" onPointerDown={e => e.stopPropagation()}>
-            <div className="absolute top-0 left-0 w-full h-full bg-[#fcfcfc] flex">
+          <div className="bg-[var(--color-bg-panel)] border border-[var(--color-border)] w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden relative" onPointerDown={e => e.stopPropagation()}>
+            <div className="absolute top-0 left-0 w-full h-full bg-[var(--color-bg-panel)] flex">
               <div className="flex-1 p-10 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar">
                 {renderProjectDetail()}
               </div>
-              <button onClick={() => setDetailProjectId(null)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-800 text-xl font-bold">✕</button>
+              <button onClick={() => setDetailProjectId(null)} className="absolute top-6 right-6 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-xl font-bold">✕</button>
             </div>
           </div>
         </div>
@@ -826,7 +826,7 @@ export default function ProjectsView({
 
       {/* FULLSCREEN FOCUS MODE */}
       {detailProjectId && isFocusMode && (
-        <div className="fixed inset-0 z-[200] bg-[#fcfcfc] flex items-start justify-center p-12 overflow-y-auto overflow-x-hidden animate-in zoom-in-95 duration-200 custom-scrollbar">
+        <div className="fixed inset-0 z-[200] bg-[var(--color-bg-panel)] flex items-start justify-center p-12 overflow-y-auto overflow-x-hidden animate-in zoom-in-95 duration-200 custom-scrollbar">
           {renderProjectDetail()}
         </div>
       )}
@@ -834,12 +834,12 @@ export default function ProjectsView({
       {/* OBJECTIVE DETAIL OVERLAY */}
       {detailObjectiveId && !isFocusMode && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in" onPointerDown={() => setDetailObjectiveId(null)}>
-          <div className="bg-[#fcfcfc] border border-gray-200 w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden relative" onPointerDown={e => e.stopPropagation()}>
-            <div className="absolute top-0 left-0 w-full h-full bg-[#fcfcfc] flex">
+          <div className="bg-[var(--color-bg-panel)] border border-[var(--color-border)] w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden relative" onPointerDown={e => e.stopPropagation()}>
+            <div className="absolute top-0 left-0 w-full h-full bg-[var(--color-bg-panel)] flex">
               <div className="flex-1 p-10 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar">
                 {renderObjectiveDetail()}
               </div>
-              <button onClick={() => setDetailObjectiveId(null)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-800 text-xl font-bold">✕</button>
+              <button onClick={() => setDetailObjectiveId(null)} className="absolute top-6 right-6 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-xl font-bold">✕</button>
             </div>
           </div>
         </div>
@@ -847,7 +847,7 @@ export default function ProjectsView({
 
       {/* FULLSCREEN FOCUS MODE OBJECTIVE */}
       {detailObjectiveId && isFocusMode && (
-        <div className="fixed inset-0 z-[200] bg-[#fcfcfc] flex items-start justify-center p-12 overflow-y-auto overflow-x-hidden animate-in zoom-in-95 duration-200 custom-scrollbar">
+        <div className="fixed inset-0 z-[200] bg-[var(--color-bg-panel)] flex items-start justify-center p-12 overflow-y-auto overflow-x-hidden animate-in zoom-in-95 duration-200 custom-scrollbar">
           {renderObjectiveDetail()}
         </div>
       )}
