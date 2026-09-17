@@ -213,7 +213,6 @@ export default function GanttView({
   const pxRef     = useRef(null);   // current pxPerDay
 
   const pxPerDay  = SCALE_CFG[scale].pxPerDay * zoom;
-  pxRef.current   = pxPerDay;        // sync in render — always current in handlers
 
   const leftW     = hideNames ? 0 : LEFT_W;
   const totalW    = totalDays * pxPerDay;
@@ -262,7 +261,8 @@ export default function GanttView({
   }, [origin, TODAY]);
 
   useEffect(() => { scrollToToday(); }, []);       // mount
-  useEffect(() => { scrollToToday(); }, [scale]);  // scale change — eslint-disable-line
+  useEffect(() => { scrollToToday(); }, [scrollToToday]);  // scale change — eslint-disable-line
+  useEffect(() => { pxRef.current = pxPerDay; }, [pxPerDay]);
 
   // ── Zoom with preserved viewport center ──────────────────────────────────────
   // When zoom changes, we want the date that was at the horizontal centre of the

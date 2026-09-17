@@ -11,7 +11,7 @@ async function getDailyLog(dateStr) {
       }
     }
   });
-  
+
   if (!log) {
     return {
       date: dateStr,
@@ -26,7 +26,7 @@ async function getDailyLog(dateStr) {
 async function getCompletedTasks(dateStr) {
   const startOfDay = new Date(dateStr);
   startOfDay.setHours(0, 0, 0, 0);
-  
+
   const endOfDay = new Date(dateStr);
   endOfDay.setHours(23, 59, 59, 999);
 
@@ -57,7 +57,7 @@ export default async function JournalDeepWork() {
   const today = new Date();
   // Adjust for local timezone to get correct YYYY-MM-DD
   const offset = today.getTimezoneOffset();
-  const dateStr = new Date(today.getTime() - (offset*60*1000)).toISOString().split('T')[0];
+  const dateStr = new Date(today.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
 
   const [dailyLog, tasks, weather] = await Promise.all([
     getDailyLog(dateStr),
@@ -73,15 +73,10 @@ export default async function JournalDeepWork() {
 
   return (
     <div className="w-full max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col animate-in slide-in-from-bottom-4 duration-700">
-      <div className="flex items-center gap-4 mb-8 text-[var(--color-text-muted)] mt-8">
-        <a href="/" className="hover:text-[var(--color-text-main)] transition-colors">← Back to Command Center</a>
-        <span>/</span>
-        <span>Journal (Second Brain)</span>
-      </div>
 
       <header className="mb-8">
         <h1 className="text-4xl font-bold text-[var(--color-text-main)] mb-4 outline-none">
-          Daily Log: {dateStr}
+          {dateStr}
         </h1>
         {weather && (
           <div className="flex items-center space-x-3 text-sm text-[var(--color-text-muted)] bg-[var(--color-bg-panel)] px-4 py-2 rounded-lg inline-flex">
@@ -95,29 +90,29 @@ export default async function JournalDeepWork() {
       </header>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-12">
-        <SecondBrainEditor 
-          initialContent={initialContent} 
+        <SecondBrainEditor
+          initialContent={initialContent}
           onSave={async (html) => {
             'use server';
             await prisma.dailyLog.upsert({
               where: { date: dateStr },
               update: { content: html },
-              create: { 
-                date: dateStr, 
+              create: {
+                date: dateStr,
                 content: html,
                 weatherData: weather ? JSON.stringify(weather) : null
               }
             });
           }}
           onExtract={async (text) => {
-             'use server';
-             // Handle 1-click extract logic
+            'use server';
+            // Handle 1-click extract logic
           }}
         />
 
-        <BacklinkPanel 
-          backlinks={[]} 
-          dailyLogMentions={[]} 
+        <BacklinkPanel
+          backlinks={[]}
+          dailyLogMentions={[]}
         />
       </div>
     </div>

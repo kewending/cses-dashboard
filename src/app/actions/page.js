@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
@@ -13,67 +12,17 @@ import {
   useDroppable
 } from '@dnd-kit/core';
 import {
-  SortableContext,
   arrayMove,
-  verticalListSortingStrategy,
-  useSortable
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { getTasks, getSessions, getObjectives, createTask, updateTask, toggleTaskComplete, createSession, updateSession, deleteSession, createSubtask, deleteTask, reorderSubtasks, getProjects, createProject, updateProject, deleteProject, createObjective, deleteObjective, reorderProjects, updateObjective } from './serverActions';
 
 // --- MOCK DATA ---
-const INITIAL_TASKS = [
-  {
-    id: 't1',
-    title: 'Set up Sunsama',
-    status: 'today',
-    plannedDurationMinutes: 20,
-    actualDurationSeconds: 0,
-    tag: 'work',
-    objectiveId: 'obj1',
-    isCompleted: false,
-    priority: 'High',
-    startDate: '2026-09-12',
-    dueDate: '2026-09-12',
-    notes: 'You\'ve already created your first task. You can add more with the keyboard shortcut A or by clicking the "Add Task" button.',
-    subtasks: [
-      { id: 'st1', title: 'Add a task', isCompleted: true, plannedDurationMinutes: 5, actualDurationSeconds: 300 },
-      { id: 'st2', title: 'Complete daily planning', isCompleted: false, plannedDurationMinutes: 15, actualDurationSeconds: 0 },
-    ]
-  },
-  {
-    id: 't2',
-    title: 'Outline thesis structure',
-    status: 'today',
-    plannedDurationMinutes: 30,
-    actualDurationSeconds: 0,
-    tag: 'work',
-    objectiveId: null,
-    isCompleted: false,
-    priority: 'Medium',
-    startDate: '',
-    dueDate: '',
-    notes: '',
-    subtasks: []
-  },
-];
-
-const INITIAL_SESSIONS = [
-  { id: 's1', taskId: 't1', startMinutes: 9 * 60 },
-  { id: 's2', taskId: 't2', startMinutes: 11 * 60 + 35 },
-];
-
-const INITIAL_OBJECTIVES = [
-  { id: 'obj1', title: 'Writing Thesis' },
-  { id: 'obj2', title: 'Launch SaaS MVP' },
-];
+// Removed unused mock data
 
 
 
 import DateSelectorDropdown from '@/components/DateSelectorDropdown';
 import FilterDropdown from '@/components/FilterDropdown';
-import MoreActionsDropdown from '@/components/MoreActionsDropdown';
-import TaskNotes from '@/components/TaskNotes';
 import SortableTask from '@/components/SortableTask';
 import DraggableSession from '@/components/DraggableSession';
 import CurrentTimeLine from '@/components/CurrentTimeLine';
