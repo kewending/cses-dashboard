@@ -113,6 +113,15 @@ export async function updateProject(id, data) {
     where: { id },
     data: updateData,
   });
+
+  // Archive linked notes if project is completed
+  if (data.status && data.status.toUpperCase() === 'COMPLETED') {
+    await prisma.note.updateMany({
+      where: { linkedProjectId: id },
+      data: { paraCategory: 'ARCHIVE' }
+    });
+  }
+
   revalidatePath('/actions');
   return formatProject(project);
 }

@@ -1,6 +1,7 @@
 import Sidebar from "../components/Sidebar";
 import { cookies } from 'next/headers';
 import { SettingsProvider } from "../lib/SettingsContext";
+import QuickCaptureModal from "../components/QuickCapture/QuickCaptureModal";
 import "./globals.css";
 
 export const metadata = {
@@ -25,6 +26,9 @@ export default async function RootLayout({ children }) {
               {children}
             </div>
           </main>
+          
+          {/* Global Quick Capture (Cmd+K) */}
+          <QuickCaptureModal />
         </SettingsProvider>
       </body>
     </html>

@@ -21,6 +21,7 @@ export default function Sidebar({ defaultCollapsed = false }) {
     { icon: "🧠", label: "Core Identity & Vision", href: "/identity" },
     { icon: "⚙️", label: "Action Engine", href: "/actions" },
     { icon: "📚", label: "Second Brain", href: "/journal" },
+    { icon: "📝", label: "Daily Diary", href: "/diary" },
     { icon: "🧬", label: "Health Data", href: "/health" },
     { icon: "💰", label: "Wealth", href: "/finance" },
     { icon: "🤝", label: "Network CRM", href: "/crm" },

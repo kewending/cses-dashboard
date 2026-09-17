@@ -371,47 +371,7 @@ export default function ProjectsView({
         </DragOverlay>
       </DndContext>
 
-      {/* PROJECT DETAIL OVERLAY */}
-      {detailProjectId && !isFocusMode && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in" onPointerDown={() => setDetailProjectId(null)}>
-          <div className="bg-[var(--color-bg-panel)] border border-[var(--color-border)] w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden relative" onPointerDown={e => e.stopPropagation()}>
-            <div className="absolute top-0 left-0 w-full h-full bg-[var(--color-bg-panel)] flex">
-              <div className="flex-1 p-10 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar">
-                {renderProjectDetail()}
-              </div>
-              <button onClick={() => setDetailProjectId(null)} className="absolute top-6 right-6 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-xl font-bold">✕</button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* FULLSCREEN FOCUS MODE */}
-      {detailProjectId && isFocusMode && (
-        <div className="fixed inset-0 z-[200] bg-[var(--color-bg-panel)] flex items-start justify-center p-12 overflow-y-auto overflow-x-hidden animate-in zoom-in-95 duration-200 custom-scrollbar">
-          {renderProjectDetail()}
-        </div>
-      )}
-
-      {/* OBJECTIVE DETAIL OVERLAY */}
-      {detailObjectiveId && !isFocusMode && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in" onPointerDown={() => setDetailObjectiveId(null)}>
-          <div className="bg-[var(--color-bg-panel)] border border-[var(--color-border)] w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden relative" onPointerDown={e => e.stopPropagation()}>
-            <div className="absolute top-0 left-0 w-full h-full bg-[var(--color-bg-panel)] flex">
-              <div className="flex-1 p-10 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar">
-                {renderObjectiveDetail()}
-              </div>
-              <button onClick={() => setDetailObjectiveId(null)} className="absolute top-6 right-6 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-xl font-bold">✕</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* FULLSCREEN FOCUS MODE OBJECTIVE */}
-      {detailObjectiveId && isFocusMode && (
-        <div className="fixed inset-0 z-[200] bg-[var(--color-bg-panel)] flex items-start justify-center p-12 overflow-y-auto overflow-x-hidden animate-in zoom-in-95 duration-200 custom-scrollbar">
-          {renderObjectiveDetail()}
-        </div>
-      )}
 
       {/* PROJECT CREATOR MODAL */}
       {showProjectCreator && (

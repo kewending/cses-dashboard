@@ -99,6 +99,7 @@ model Contact {
   interactions      Interaction[]
   relatedTo         ContactRelation[]  @relation("RelationFrom")
   relatedFrom       ContactRelation[]  @relation("RelationTo")
+  dailyLogLinks     CRMInteractionLink[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -208,4 +209,70 @@ model ExchangeRate {
   updatedAt      DateTime @default(now()) @updatedAt
 
   @@unique([sourceCurrency, targetCurrency])
+}
+
+// ─── Second Brain Module ─────────────────────────────────────────────────────
+
+model Note {
+  id              String      @id @default(cuid())
+  title           String
+  content         String      // Unified content field (HTML/JSON from TipTap)
+  layer           String      // "L1", "L2", "L3"
+  status          String      @default("INCOMPLETE") // "INCOMPLETE" | "COMPLETED"
+  paraCategory    String      @default("INBOX")      // PROJECT | AREA | RESOURCE | ARCHIVE | INBOX
+  touchCount      Int         @default(0)
+  lastTouchedAt   DateTime    @default(now())
+  sourceUrl       String?     // original unprocessed source link (for L1)
+  linkedProjectId String?     // ID for the L2 -> Project bindings
+
+  linksOut        NoteLink[]  @relation("NoteLinkFrom")
+  linksIn         NoteLink[]  @relation("NoteLinkTo")
+
+  dailyLinks      DailyLogLink[]
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model NoteLink {
+  id       String @id @default(cuid())
+  fromId   String
+  toId     String
+  fromNote Note   @relation("NoteLinkFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  toNote   Note   @relation("NoteLinkTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
+}
+
+model DailyLog {
+  id           String             @id @default(cuid())
+  date         String             @unique // YYYY-MM-DD
+  content      String             // The actual TipTap content (Execution/Distillation zones)
+  weatherData  String?            // JSON string for Open-Meteo weather context
+  
+  linkedNotes  DailyLogLink[]
+  crmLinks     CRMInteractionLink[]
+
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model DailyLogLink {
+  id         String   @id @default(cuid())
+  dailyLogId String
+  noteId     String
+  dailyLog   DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+  note       Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@unique([dailyLogId, noteId])
+}
+
+model CRMInteractionLink {
+  id         String   @id @default(cuid())
+  dailyLogId String
+  contactId  String
+  dailyLog   DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([dailyLogId, contactId])
 }
