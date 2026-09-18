@@ -131,7 +131,7 @@ export default function HeartRateView({
                   key={r}
                   onClick={() => onChangeRange(r)}
                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-                    dateRange === r ? 'bg-pink-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-white'
+                    dateRange === r ? 'bg-pink-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
                   }`}
                 >
                   {r} Days

@@ -153,7 +153,7 @@ export default function HealthDashboardClient({ initialData }) {
               className={`px-8 py-2.5 rounded-full text-sm font-bold transition-all duration-300 relative z-10 ${
                 activeTab === tab.id 
                   ? 'text-white' 
-                  : 'text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-glass-bg)]'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-glass-bg)]'
               }`}
             >
               {activeTab === tab.id && (
@@ -167,7 +167,7 @@ export default function HealthDashboardClient({ initialData }) {
         <button 
           onClick={handleSync}
           disabled={isSyncing}
-          className="flex items-center gap-2 bg-[var(--color-glass-bg)] hover:bg-[var(--color-bg-panel-hover)] backdrop-blur-md border border-[var(--color-glass-border)] text-white px-5 py-2.5 rounded-full font-medium transition-all shadow-lg hover:shadow-xl disabled:opacity-70"
+          className="flex items-center gap-2 bg-[var(--color-glass-bg)] hover:bg-[var(--color-bg-panel-hover)] backdrop-blur-md border border-[var(--color-glass-border)] text-[var(--color-text-main)] px-5 py-2.5 rounded-full font-medium transition-all shadow-lg hover:shadow-xl disabled:opacity-70"
         >
           <RefreshCw size={18} className={isSyncing ? "animate-spin" : ""} />
           {isSyncing ? "Syncing..." : "Sync Data"}

@@ -87,7 +87,7 @@ export default function CalendarPicker({ selectedDate, onSelectDate, availableDa
                 aspect-square rounded-2xl flex items-center justify-center transition-all relative font-medium
                 ${!isCurrentMonth ? 'opacity-20' : 'opacity-100'}
                 ${isSelected ? `${t.bg} text-white shadow-lg ${t.shadow} scale-105` : ''}
-                ${!isSelected && hasData ? 'hover:bg-[var(--color-bg-panel-hover)] cursor-pointer text-white' : ''}
+                ${!isSelected && hasData ? 'hover:bg-[var(--color-bg-panel-hover)] cursor-pointer text-[var(--color-text-main)]' : ''}
                 ${!hasData && !isSelected ? 'cursor-not-allowed opacity-30 text-[var(--color-text-muted)]' : ''}
                 ${today && !isSelected ? `border border-[var(--color-border-hover)] ${t.text}` : ''}
               `}
