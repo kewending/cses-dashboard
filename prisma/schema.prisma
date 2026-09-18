@@ -276,3 +276,64 @@ model CRMInteractionLink {
 
   @@unique([dailyLogId, contactId])
 }
+
+// ─── Health Module ────────────────────────────────────────────────────────────
+
+model ActivityData {
+  id               String   @id @default(cuid())
+  date             String   @unique // YYYY-MM-DD
+  
+  steps            Int
+  distanceKm       Float
+  caloriesKcal     Float
+  timelineJson     String   // Stored as JSON string due to SQLite limitations
+}
+
+model SleepData {
+  id               String   @id @default(cuid())
+  date             String   @unique // YYYY-MM-DD
+  
+  totalDurationMins Int
+  deepSleepMins    Int
+  lightSleepMins   Int
+  remSleepMins     Int
+  awakeTimes       Int?
+  fallingSleepMins Int?
+  sleepEfficiency  Int?
+  startTime        String
+  endTime          String
+}
+
+model HeartRateData {
+  id               String   @id @default(cuid())
+  date             String   // YYYY-MM-DD (not unique since multiple records per day)
+  
+  time             String   // e.g., "08:30AM"
+  bpm              Int
+}
+
+model PhysicalData {
+  id                 String   @id @default(cuid())
+  date               String   @unique // YYYY-MM-DD
+  
+  weightKg           Float?
+  bmi                Float?
+  bodyFatPct         Float?
+  fatMassKg          Float?
+  fatFreeMassKg      Float?
+  muscleMassKg       Float?
+  muscleRatePct      Float?
+  skeletalMusclePct  Float?
+  boneMassKg         Float?
+  proteinMassKg      Float?
+  proteinPct         Float?
+  waterWeightKg      Float?
+  bodyWaterPct       Float?
+  subcutaneousFatPct Float?
+  visceralFat        Float?
+  bmrKcal            Float?
+  bodyAge            Int?
+  idealBodyWeightKg  Float?
+}
+
+// ─── Health Module ────────────────────────────────────────────────────────────

@@ -14,18 +14,21 @@ import Highlight from '@tiptap/extension-highlight';
 import Image from '@tiptap/extension-image';
 import { Markdown } from 'tiptap-markdown';
 import suggestion from './extensions/suggestion';
+import { Iframe } from './extensions/iframe';
 import { 
   Undo, Redo, Heading1, Heading2, Heading3, 
   List, ListOrdered, Quote, Bold, Italic, 
   Strikethrough, Code, Underline as UnderlineIcon, 
   Link as LinkIcon, Superscript as SuperscriptIcon, 
   Subscript as SubscriptIcon, AlignLeft, AlignCenter, 
-  AlignRight, AlignJustify, PlusSquare, Check, X
+  AlignRight, AlignJustify, PlusSquare, Check, X, AppWindow
 } from 'lucide-react';
 
 const MenuBar = ({ editor }) => {
   const [showImagePrompt, setShowImagePrompt] = useState(false);
+  const [showIframePrompt, setShowIframePrompt] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
+  const [iframeUrl, setIframeUrl] = useState('');
 
   if (!editor) {
     return null;
@@ -49,6 +52,14 @@ const MenuBar = ({ editor }) => {
     }
     setShowImagePrompt(false);
     setImageUrl('');
+  };
+
+  const submitIframe = () => {
+    if (iframeUrl) {
+      editor.chain().focus().setIframe({ src: iframeUrl }).run();
+    }
+    setShowIframePrompt(false);
+    setIframeUrl('');
   };
 
   return (
@@ -160,6 +171,39 @@ const MenuBar = ({ editor }) => {
           </div>
         )}
       </div>
+
+      <div className="w-px h-6 bg-[var(--color-glass-border)] mx-1" />
+
+      <div className="relative">
+        <button 
+          onClick={() => { setShowIframePrompt(!showIframePrompt); setShowImagePrompt(false); }} 
+          className={`flex items-center gap-1 p-1.5 rounded transition-colors ${showIframePrompt ? 'bg-[var(--color-accent)]/20 text-[var(--color-accent)]' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-panel)]'}`}
+          title="Embed Website (Iframe)"
+        >
+          <AppWindow size={16} />
+          <span className="text-xs font-medium">Embed</span>
+        </button>
+
+        {showIframePrompt && (
+          <div className="absolute top-full mt-2 right-0 z-[100] bg-[var(--color-bg-panel)] border border-[var(--color-glass-border)] rounded-xl shadow-xl p-3 flex gap-2 w-80 animate-in fade-in slide-in-from-top-2">
+            <input 
+              autoFocus
+              type="text" 
+              placeholder="Paste website URL (https://...)"
+              className="flex-1 min-w-0 bg-[var(--color-bg-dark)] border border-[var(--color-glass-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--color-text-main)] outline-none focus:border-[var(--color-accent)] transition-colors"
+              value={iframeUrl}
+              onChange={e => setIframeUrl(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && submitIframe()}
+            />
+            <button onClick={submitIframe} className="p-1.5 shrink-0 bg-[var(--color-accent)] text-white rounded-lg hover:brightness-110 transition-all shadow-sm">
+              <Check size={16} />
+            </button>
+            <button onClick={() => {setShowIframePrompt(false); setIframeUrl('');}} className="p-1.5 shrink-0 bg-[var(--color-bg-dark)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] border border-[var(--color-glass-border)] rounded-lg transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -175,6 +219,7 @@ export default function SecondBrainEditor({ initialContent, onSave }) {
       Subscript,
       Highlight,
       Image,
+      Iframe,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),

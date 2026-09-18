@@ -48,3 +48,11 @@ dev.db
 
 # Upload
 /public/uploads/
+
+# Health Module Data & Credentials
+/scripts/credentials.json
+/scripts/drive_token.json
+/scripts/*.json
+/scripts/*.jpg
+/scripts/*.jpeg
+/scripts/*.png 

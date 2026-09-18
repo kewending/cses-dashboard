@@ -252,10 +252,21 @@ export default function ThreePaneEditor({ initialId }) {
           
           {note.layer === 'L1' ? (
             <div className="flex-1 flex flex-col h-full bg-[var(--color-bg-dark)]">
-              <div className="p-4 border-b border-[var(--color-glass-border)] bg-[var(--color-bg-panel)] flex items-center shadow-sm whitespace-nowrap overflow-hidden shrink-0">
+              <div className="p-4 border-b border-[var(--color-glass-border)] bg-[var(--color-bg-panel)] flex items-center justify-between shadow-sm whitespace-nowrap overflow-hidden shrink-0">
                 <h3 className="font-semibold text-[var(--color-text-main)] flex items-center gap-2">
                   <span className="text-blue-400">←</span> Original Source
                 </h3>
+                {note.sourceUrl && (
+                  <a 
+                    href={note.sourceUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    title="Open Source in New Tab"
+                    className="p-1.5 rounded bg-[var(--color-bg-dark)] hover:bg-[var(--color-glass-border)] text-[var(--color-text-main)] transition-colors border border-[var(--color-glass-border)] shrink-0 flex items-center gap-1 text-xs"
+                  >
+                    Open <span className="text-blue-400 text-lg leading-none">↗</span>
+                  </a>
+                )}
               </div>
               {note.sourceUrl ? (
                 <div className="flex-1 bg-white relative">
