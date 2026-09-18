@@ -141,7 +141,7 @@ Every row follows this layout:
 ## 6. Styling Conventions
 
 - Use Tailwind utility classes throughout
-- Dark mode canvas: `bg-[var(--color-bg-dark)]`; modals use light mode `bg-[#fcfcfc]`
+- **Dark/Light Mode Themeing**: Do NOT hardcode colors (e.g. `bg-white/5` or `text-white`) for backgrounds and borders. Use the CSS variables provided by `SettingsContext` (like `bg-[var(--color-glass-bg)]`, `text-[var(--color-text-main)]`) so the app dynamically supports both Light and Dark mode changes from user settings.
 - CSS variables for theme tokens are defined in `globals.css`
 - Hover-reveal pattern: `opacity-0 group-hover:opacity-100` with `group` on the parent
 - Modal overlays: `fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm`
