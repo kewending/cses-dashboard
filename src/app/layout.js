@@ -2,6 +2,7 @@ import Sidebar from "../components/Sidebar";
 import { cookies } from 'next/headers';
 import { SettingsProvider } from "../lib/SettingsContext";
 import QuickCaptureModal from "../components/QuickCapture/QuickCaptureModal";
+import AgentChat from "../components/AgentChat";
 import "./globals.css";
 
 export const metadata = {
@@ -58,6 +59,9 @@ export default async function RootLayout({ children }) {
           
           {/* Global Quick Capture (Cmd+K) */}
           <QuickCaptureModal />
+          
+          {/* Floating Agent Chat */}
+          <AgentChat />
         </SettingsProvider>
       </body>
     </html>
