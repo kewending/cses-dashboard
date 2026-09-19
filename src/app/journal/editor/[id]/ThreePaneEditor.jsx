@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Circle, Plus, Search, Loader2, Edit3, PanelLeftClose, PanelRightClose, PanelLeft, PanelRight } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Circle, Plus, Search, Loader2, Edit3, PanelLeftClose, PanelRightClose, PanelLeft, PanelRight, Sparkles } from 'lucide-react';
 import SecondBrainEditor from '@/components/Editor/SecondBrainEditor';
 
 export default function ThreePaneEditor({ initialId }) {
@@ -23,6 +23,9 @@ export default function ThreePaneEditor({ initialId }) {
   // Accordion state
   const [maximizedInputId, setMaximizedInputId] = useState(null);
   const [maximizedOutputId, setMaximizedOutputId] = useState(null);
+
+  const editorRef = useRef(null);
+  const [isGeneratingL1, setIsGeneratingL1] = useState(false);
 
   // Panel sizing state
   const [leftWidth, setLeftWidth] = useState(320);
@@ -146,6 +149,66 @@ export default function ThreePaneEditor({ initialId }) {
     }
   };
 
+  const handleGenerateL1Note = async () => {
+    if (!note.sourceUrl || isGeneratingL1) return;
+    setIsGeneratingL1(true);
+    
+    try {
+      const res = await fetch('http://localhost:8000/api/l1-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: note.sourceUrl })
+      });
+      
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      const editor = editorRef.current?.getEditor();
+      
+      if (editor) {
+        editor.chain().focus('end').insertContent('<hr><p><strong>🤖 L1 Note Generation:</strong></p><p></p>').run();
+      }
+
+      let buffer = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        
+        let boundary = buffer.indexOf('\n\n');
+        while (boundary !== -1) {
+          const block = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          
+          if (block.trim()) {
+            const dataMatch = block.match(/data:\s*(.*)/);
+            if (dataMatch) {
+              const dataStr = dataMatch[1];
+              if (dataStr && dataStr !== '{}') {
+                try {
+                  const data = JSON.parse(dataStr);
+                  if (data.content && editor) {
+                    const tr = editor.state.tr.insertText(data.content, editor.state.doc.content.size - 1);
+                    editor.view.dispatch(tr);
+                  } else if (data.error && editor) {
+                    editor.chain().focus('end').insertContent(`<p style="color:red">Error: ${data.error}</p>`).run();
+                  }
+                } catch (e) {
+                  console.error("JSON Parse Error:", e, dataStr);
+                }
+              }
+            }
+          }
+          boundary = buffer.indexOf('\n\n');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsGeneratingL1(false);
+    }
+  };
+
   const handleLinkExisting = async (id, direction) => {
     try {
       await fetch('/api/notes/links', {
@@ -253,9 +316,22 @@ export default function ThreePaneEditor({ initialId }) {
           {note.layer === 'L1' ? (
             <div className="flex-1 flex flex-col h-full bg-[var(--color-bg-dark)]">
               <div className="p-4 border-b border-[var(--color-glass-border)] bg-[var(--color-bg-panel)] flex items-center justify-between shadow-sm whitespace-nowrap overflow-hidden shrink-0">
-                <h3 className="font-semibold text-[var(--color-text-main)] flex items-center gap-2">
-                  <span className="text-blue-400">←</span> Original Source
-                </h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="font-semibold text-[var(--color-text-main)] flex items-center gap-2">
+                    <span className="text-blue-400">←</span> Original Source
+                  </h3>
+                  {note.sourceUrl && (
+                    <button 
+                      onClick={handleGenerateL1Note}
+                      disabled={isGeneratingL1}
+                      className="flex items-center gap-1.5 px-2 py-1 bg-[var(--color-accent)]/20 hover:bg-[var(--color-accent)]/30 text-[var(--color-accent)] rounded border border-[var(--color-accent)]/30 transition-colors text-xs font-medium disabled:opacity-50"
+                      title="Generate L1 Note Summary"
+                    >
+                      {isGeneratingL1 ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                      {isGeneratingL1 ? 'Generating...' : 'Generate Summary'}
+                    </button>
+                  )}
+                </div>
                 {note.sourceUrl && (
                   <a 
                     href={note.sourceUrl} 
@@ -391,6 +467,7 @@ export default function ThreePaneEditor({ initialId }) {
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar px-8 md:px-12 pb-24">
              <SecondBrainEditor 
+               ref={editorRef}
                key={note.id}
                initialContent={note.content}
                onSave={async (html) => {

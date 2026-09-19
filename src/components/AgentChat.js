@@ -23,6 +23,7 @@ export default function AgentChat() {
     if (!input.trim() || isLoading) return;
     
     const userMsg = { role: "user", content: input };
+    const nextMessages = [...messages, userMsg];
     setMessages(prev => [...prev, userMsg]);
     setInput("");
     setIsLoading(true);
@@ -35,7 +36,7 @@ export default function AgentChat() {
       const response = await fetch("http://localhost:8000/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input })
+        body: JSON.stringify({ messages: nextMessages })
       });
       
       if (!response.ok) {
@@ -116,7 +117,22 @@ export default function AgentChat() {
         <div className="fixed bottom-24 right-6 w-96 h-[600px] max-h-[80vh] bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden">
           <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-bg-dark)]">
             <h3 className="font-bold text-[var(--color-text-main)]">CSES Agent</h3>
-            <button onClick={() => setIsOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] cursor-pointer">✕</button>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => {
+                  setMessages([]);
+                  setCurrentTool(null);
+                  setIsLoading(false);
+                }}
+                className="text-[var(--color-text-muted)] hover:text-blue-500 cursor-pointer flex items-center justify-center"
+                title="New Chat"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+              </button>
+              <button onClick={() => setIsOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] cursor-pointer">✕</button>
+            </div>
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">

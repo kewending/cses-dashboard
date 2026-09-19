@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -11,7 +11,7 @@ import Superscript from '@tiptap/extension-superscript';
 import Subscript from '@tiptap/extension-subscript';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
-import Image from '@tiptap/extension-image';
+import { ResizableImage } from './extensions/ResizableImage';
 import { Markdown } from 'tiptap-markdown';
 import suggestion from './extensions/suggestion';
 import { Iframe } from './extensions/iframe';
@@ -208,17 +208,22 @@ const MenuBar = ({ editor }) => {
   )
 }
 
-export default function SecondBrainEditor({ initialContent, onSave }) {
+const SecondBrainEditor = forwardRef(({ initialContent, onSave }, ref) => {
+  const timeoutRef = useRef(null);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit,
-      Markdown,
+      Markdown.configure({
+        transformPastedText: true,
+        transformCopiedText: true,
+      }),
       Underline,
       Superscript,
       Subscript,
       Highlight,
-      Image,
+      ResizableImage,
       Iframe,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
@@ -244,9 +249,16 @@ export default function SecondBrainEditor({ initialContent, onSave }) {
       },
     },
     onUpdate: ({ editor }) => {
-      onSave?.(editor.getHTML());
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        onSave?.(editor.getHTML());
+      }, 1000);
     },
   });
+
+  useImperativeHandle(ref, () => ({
+    getEditor: () => editor,
+  }), [editor]);
 
   if (!editor) return null;
 
@@ -258,4 +270,8 @@ export default function SecondBrainEditor({ initialContent, onSave }) {
       </div>
     </div>
   );
-}
+});
+
+SecondBrainEditor.displayName = 'SecondBrainEditor';
+
+export default SecondBrainEditor;
