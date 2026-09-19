@@ -424,26 +424,26 @@ export default function ActionEngine() {
               <button className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-dark)] text-[var(--color-text-main)] rounded border border-[var(--color-border)] hover:bg-[var(--color-bg-panel-hover)] text-sm font-semibold shadow-sm transition-colors">
                 <span className="text-[12px]">≡</span> Filter
               </button>
-              <div className="absolute top-full mt-2 left-0 w-64 bg-[#232323] rounded-lg shadow-2xl border border-[var(--color-border)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 py-2">
+              <div className="absolute top-full mt-2 left-0 w-64 bg-[var(--color-bg-panel)] rounded-lg shadow-2xl border border-[var(--color-border)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 py-2">
                 <div className="px-4 pb-2 text-xs text-[var(--color-text-muted)] opacity-70 font-semibold border-b border-[var(--color-border)] mb-2 mt-1">
                   Filter by objective:
                 </div>
                 <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                  <button onClick={() => setObjectiveFilter('all')} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
+                  <button onClick={() => setObjectiveFilter('all')} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel-hover)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <span className="text-green-500 text-lg">🎯</span> all
                     </span>
                     {objectiveFilter === 'all' && <span className="text-[var(--color-text-muted)] text-xs">✓</span>}
                   </button>
                   {objectives.map(obj => (
-                    <button key={obj.id} onClick={() => setObjectiveFilter(obj.id)} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
+                    <button key={obj.id} onClick={() => setObjectiveFilter(obj.id)} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel-hover)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
                       <span className="flex items-center gap-2 pl-4">
                         <span className="text-[#f2a950] text-lg">🎯</span> {obj.title}
                       </span>
                       {objectiveFilter === obj.id && <span className="text-[var(--color-text-muted)] text-xs">✓</span>}
                     </button>
                   ))}
-                  <button onClick={() => setObjectiveFilter('unassigned')} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
+                  <button onClick={() => setObjectiveFilter('unassigned')} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel-hover)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
                     <span className="flex items-center gap-2 pl-4">
                       <span className="text-[var(--color-text-muted)] text-lg">📥</span> unassigned
                     </span>

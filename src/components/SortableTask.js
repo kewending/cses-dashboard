@@ -31,7 +31,7 @@ export default function SortableTask({ task, session, isActiveTimer, activeTimer
         <div className="flex-1 flex gap-2 items-start cursor-grab active:cursor-grabbing mr-2 pb-1" {...attributes} {...listeners} onClick={() => onOpenDetail(task.id)}>
           <button
             onClick={(e) => { e.stopPropagation(); onToggleComplete(task.id); }}
-            className={`w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${task.isCompleted ? 'bg-green-500 border-green-500' : 'border-[var(--color-border-hover)] hover:border-white/60'}`}
+            className={`w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${task.isCompleted ? 'bg-green-500 border-green-500' : 'border-[var(--color-border-hover)] hover:border-[var(--color-text-main)]'}`}
           >
             {task.isCompleted && <span className="text-[var(--color-text-main)] text-[10px]">✓</span>}
           </button>
@@ -61,7 +61,7 @@ export default function SortableTask({ task, session, isActiveTimer, activeTimer
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <button
                   onClick={(e) => { e.stopPropagation(); onToggleSubtaskComplete(task.id, sub.id); }}
-                  className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${sub.isCompleted ? 'bg-green-500 border-green-500' : 'border-[var(--color-border-hover)] hover:border-white/60'}`}
+                  className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${sub.isCompleted ? 'bg-green-500 border-green-500' : 'border-[var(--color-border-hover)] hover:border-[var(--color-text-main)]'}`}
                 >
                   {sub.isCompleted && <span className="text-[var(--color-text-main)] text-[8px]">✓</span>}
                 </button>

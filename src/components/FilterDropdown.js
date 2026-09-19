@@ -27,7 +27,7 @@ export default function FilterDropdown({ taskFilter, setTaskFilter, allTags }) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 left-0 w-64 bg-[#232323] rounded-lg shadow-2xl border border-[var(--color-border)] z-50 py-2">
+        <div className="absolute top-full mt-2 left-0 w-64 bg-[var(--color-bg-panel)] rounded-lg shadow-2xl border border-[var(--color-border)] z-50 py-2">
           <div className="px-4 pb-2 text-xs text-[var(--color-text-muted)] opacity-70 font-semibold border-b border-[var(--color-border)] mb-2 mt-1">
             Filter tasks by channel:
           </div>
@@ -37,18 +37,18 @@ export default function FilterDropdown({ taskFilter, setTaskFilter, allTags }) {
               placeholder="Search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded text-sm p-1.5 focus:outline-none text-[var(--color-text-main)] placeholder-white/30"
+              className="w-full bg-[var(--color-bg-dark)] border border-[var(--color-border)] rounded text-sm p-1.5 focus:outline-none text-[var(--color-text-main)] placeholder-[var(--color-text-muted)]"
             />
           </div>
           <div className="max-h-48 overflow-y-auto custom-scrollbar">
-            <button onClick={() => { setTaskFilter('all'); setIsOpen(false); }} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
+            <button onClick={() => { setTaskFilter('all'); setIsOpen(false); }} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel-hover)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <span className="text-green-500 text-lg">#</span> all
               </span>
               {taskFilter === 'all' && <span className="text-[var(--color-text-muted)] text-xs">✓</span>}
             </button>
             {filteredTags.map(tag => (
-              <button key={tag} onClick={() => { setTaskFilter(tag); setIsOpen(false); }} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
+              <button key={tag} onClick={() => { setTaskFilter(tag); setIsOpen(false); }} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel-hover)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
                 <span className="flex items-center gap-2 pl-4">
                   <span className="text-[#f2a950] text-lg">#</span> {tag}
                 </span>

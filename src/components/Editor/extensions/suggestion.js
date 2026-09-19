@@ -45,7 +45,7 @@ const MentionList = forwardRef((props, ref) => {
   }))
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg overflow-hidden min-w-[150px]">
+    <div className="bg-[var(--color-bg-panel)] border border-[var(--color-border)] shadow-xl rounded-lg overflow-hidden min-w-[150px]">
       {props.items.length ? (
         props.items.map((item, index) => (
           <button

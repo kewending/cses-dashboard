@@ -818,7 +818,7 @@ export default function GanttView({
                           position: 'absolute', left: 0, top: 0, bottom: 0, width: 7,
                           cursor: 'ew-resize', borderRadius: '4px 0 0 4px', zIndex: 1,
                         }}
-                        className="hover:bg-black/25 transition-colors"
+                        className="hover:bg-[var(--color-bg-panel-hover)] transition-colors"
                       />
                     )}
 
@@ -846,7 +846,7 @@ export default function GanttView({
                           position: 'absolute', right: 0, top: 0, bottom: 0, width: 7,
                           cursor: 'ew-resize', borderRadius: '0 4px 4px 0', zIndex: 1,
                         }}
-                        className="hover:bg-black/25 transition-colors"
+                        className="hover:bg-[var(--color-bg-panel-hover)] transition-colors"
                       />
                     )}
                   </div>

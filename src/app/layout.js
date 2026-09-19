@@ -9,12 +9,41 @@ export const metadata = {
   description: "Comprehensive Life Operating System",
 };
 
+const themeInitScript = `
+  (function() {
+    try {
+      var stored = localStorage.getItem('cses-settings');
+      if (stored) {
+        var settings = JSON.parse(stored);
+        if (settings.theme === 'light') {
+          var root = document.documentElement;
+          root.style.setProperty('--color-bg-dark', '#f8f9fa');
+          root.style.setProperty('--color-bg-panel', '#ffffff');
+          root.style.setProperty('--color-bg-panel-hover', '#f0f0f0');
+          root.style.setProperty('--color-border', 'rgba(0,0,0,0.1)');
+          root.style.setProperty('--color-border-hover', 'rgba(0,0,0,0.2)');
+          root.style.setProperty('--color-text-main', '#1a1a24');
+          root.style.setProperty('--color-text-muted', '#666677');
+          root.style.setProperty('--color-glass-bg', 'rgba(0,0,0,0.03)');
+          root.style.setProperty('--color-glass-border', 'rgba(0,0,0,0.1)');
+        }
+        if (settings.accentColor) {
+          document.documentElement.style.setProperty('--color-accent', settings.accentColor);
+        }
+      }
+    } catch(e) {}
+  })();
+`;
+
 export default async function RootLayout({ children }) {
   const cookieStore = await cookies();
   const defaultCollapsed = cookieStore.get('sidebarCollapsed')?.value === 'true';
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="flex h-screen overflow-hidden">
         <SettingsProvider>
           {/* Responsive, Stateful Global Sidebar */}

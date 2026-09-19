@@ -269,7 +269,7 @@ export default function ThreePaneEditor({ initialId }) {
                 )}
               </div>
               {note.sourceUrl ? (
-                <div className="flex-1 bg-white relative">
+                <div className="flex-1 bg-[var(--color-bg-dark)] relative">
                   <iframe src={note.sourceUrl} className="absolute inset-0 w-full h-full border-none" title="Source View" sandbox="allow-scripts allow-same-origin" />
                 </div>
               ) : (

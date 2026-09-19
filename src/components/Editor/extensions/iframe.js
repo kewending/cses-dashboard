@@ -11,7 +11,7 @@ export const Iframe = Node.create({
     return {
       allowFullscreen: true,
       HTMLAttributes: {
-        class: 'w-full h-[600px] border border-[var(--color-glass-border)] rounded-xl shadow-lg my-6 bg-white',
+        class: 'w-full h-[600px] border border-[var(--color-glass-border)] rounded-xl shadow-lg my-6 bg-[var(--color-bg-panel)]',
       },
     }
   },
