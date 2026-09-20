@@ -337,3 +337,45 @@ model PhysicalData {
 }
 
 // ─── Health Module ────────────────────────────────────────────────────────────
+
+// ─── Psychology & Emotion Module ──────────────────────────────────────────────
+
+model MomentaryCheckIn {
+  id           String   @id @default(cuid())
+  timestamp    DateTime @default(now())
+  date         String   // YYYY-MM-DD for easy daily querying
+  
+  // Circumplex Model
+  valence      Int      // -5 to +5
+  arousal      Int      // -5 to +5
+  
+  // Subjective Metrics
+  energyLevel  Int      // 1 to 10
+  anxietyLevel Int      // 0 to 10
+  
+  // Subjective Sleep
+  sleepHours   Float?
+  sleepQuality Int?     // 1 to 5
+  
+  tags         String?  // JSON array string: ["study", "social"]
+  notes        String?  // Qualitative trigger notes
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PeriodicAssessment {
+  id               String   @id @default(cuid())
+  timestamp        DateTime @default(now())
+  date             String   // YYYY-MM-DD
+  
+  instrument       String   // "PHQ-9" | "GAD-7" | "WHO-5"
+  itemScores       String   // JSON string of raw responses
+  totalScore       Int
+  severityLabel    String
+  
+  requiresCrisisIntervention Boolean @default(false)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
