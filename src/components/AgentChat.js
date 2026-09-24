@@ -7,8 +7,31 @@ export default function AgentChat() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentTool, setCurrentTool] = useState(null);
+  const [ttsEnabled, setTtsEnabled] = useState(true); // Optional toggle
   
   const messagesEndRef = useRef(null);
+  const audioQueueRef = useRef([]);
+  const isPlayingRef = useRef(false);
+
+  const playNextAudio = () => {
+    if (audioQueueRef.current.length === 0) {
+      isPlayingRef.current = false;
+      return;
+    }
+    
+    isPlayingRef.current = true;
+    const base64Audio = audioQueueRef.current.shift();
+    const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
+    
+    audio.onended = () => {
+      playNextAudio();
+    };
+    
+    audio.play().catch(e => {
+      console.error("Audio playback error:", e);
+      playNextAudio();
+    });
+  };
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -76,6 +99,13 @@ export default function AgentChat() {
                 newMsgs[botMsgIndex] = targetMsg;
                 return newMsgs;
               });
+            } else if (eventType === "audio") {
+              if (ttsEnabled) {
+                audioQueueRef.current.push(data.base64);
+                if (!isPlayingRef.current) {
+                  playNextAudio();
+                }
+              }
             } else if (eventType === "done") {
               setIsLoading(false);
             } else if (eventType === "error") {
@@ -119,16 +149,67 @@ export default function AgentChat() {
             <h3 className="font-bold text-[var(--color-text-main)]">CSES Agent</h3>
             <div className="flex items-center gap-4">
               <button 
+                onClick={() => setTtsEnabled(!ttsEnabled)}
+                className={`text-[var(--color-text-muted)] hover:text-blue-500 cursor-pointer flex items-center justify-center ${ttsEnabled ? 'text-blue-500' : ''}`}
+                title={ttsEnabled ? "Mute TTS" : "Enable TTS"}
+              >
+                {ttsEnabled ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <line x1="23" y1="9" x2="17" y2="15"></line>
+                    <line x1="17" y1="9" x2="23" y2="15"></line>
+                  </svg>
+                )}
+              </button>
+              <button 
                 onClick={() => {
                   setMessages([]);
                   setCurrentTool(null);
                   setIsLoading(false);
+                  audioQueueRef.current = []; // Clear audio queue on new chat
+                  isPlayingRef.current = false;
                 }}
                 className="text-[var(--color-text-muted)] hover:text-blue-500 cursor-pointer flex items-center justify-center"
                 title="New Chat"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 5v14M5 12h14"/>
+                </svg>
+              </button>
+              <button 
+                onClick={async () => {
+                  try {
+                    setCurrentTool("Fetching Daily Report...");
+                    const res = await fetch("http://localhost:8000/api/daily-report");
+                    if (!res.ok) throw new Error("Failed to fetch report");
+                    const data = await res.json();
+                    
+                    const audioUrl = `http://localhost:8000${data.audio_url}`;
+                    const audio = new Audio(audioUrl);
+                    audio.play().catch(console.error);
+                    
+                    setMessages(prev => [...prev, {
+                      role: "assistant", 
+                      content: `Playing your daily report! \n[Read Script](http://localhost:8000${data.script_url})`
+                    }]);
+                    setCurrentTool(null);
+                  } catch (err) {
+                    console.error(err);
+                    setMessages(prev => [...prev, {role: "assistant", content: "Error playing daily report."}]);
+                    setCurrentTool(null);
+                  }
+                }}
+                className="text-[var(--color-text-muted)] hover:text-green-500 cursor-pointer flex items-center justify-center"
+                title="Play Daily News Report"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
               </button>
               <button onClick={() => setIsOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] cursor-pointer">✕</button>

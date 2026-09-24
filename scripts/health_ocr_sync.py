@@ -160,7 +160,7 @@ def identify_images(files):
         if height < 4000:
             if "sleep" not in categories: # Keep latest if multiple
                 categories["sleep"] = f["path"]
-        elif height < 15000:
+        elif height < 20000:
             if "walk" not in categories:
                 categories["walk"] = f["path"]
         else:
@@ -225,13 +225,32 @@ def process_sleep(image_path):
 
 def process_walk(image_path):
     text = pytesseract.image_to_string(Image.open(image_path), config='--psm 6')
+    print("--- RAW WALK OCR ---")
+    print(text[:300]) # Print first 300 chars to see what OCR captured
+    print("--------------------")
     date_match = re.search(r'(\d{4}-\d{2}-\d{2})', text)
     date_str = date_match.group(1) if date_match else None
     
-    summary_match = re.search(r'(\d+)\s+(\d+\.\d+)Km\s+(\d+)Kcal', text, re.IGNORECASE)
-    steps = int(summary_match.group(1)) if summary_match else None
-    distance = float(summary_match.group(2)) if summary_match else None
-    calories = int(summary_match.group(3)) if summary_match else None
+    def sanitize_num(s, is_float=False):
+        if not s: return None
+        s = s.replace('O', '0').replace('o', '0').replace('l', '1').replace('I', '1').replace(',', '')
+        if is_float:
+            nums = re.findall(r'\d+\.\d+|\d+', s)
+            return float(nums[0]) if nums else None
+        else:
+            nums = re.findall(r'\d+', s)
+            return int(nums[0]) if nums else None
+
+    summary_match = re.search(r'([A-Za-z0-9,]+)\s+([A-Za-z0-9,.]+)\s*Km\s+([A-Za-z0-9,]+)\s*Kcal', text, re.IGNORECASE)
+    
+    if summary_match:
+        steps = sanitize_num(summary_match.group(1))
+        distance = sanitize_num(summary_match.group(2), is_float=True)
+        calories = sanitize_num(summary_match.group(3))
+    else:
+        steps = None
+        distance = None
+        calories = None
     
     timeline_matches = re.findall(r'(\d{2}:\d{2}[AP]M)[^\d]*(\d+)', text, re.IGNORECASE)
     timeline = []
@@ -323,6 +342,16 @@ def main():
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=4, ensure_ascii=False)
         
+    # Clean up downloaded images to save space
+    print("\n[INFO] Cleaning up downloaded images...")
+    for file_info in files:
+        try:
+            if os.path.exists(file_info["path"]):
+                os.remove(file_info["path"])
+                print(f"  Deleted {file_info['filename']}")
+        except Exception as e:
+            print(f"  [WARNING] Failed to delete {file_info['filename']}: {e}")
+            
     print(f"\n[SUCCESS] Pipeline complete. Results saved to {out_path}")
 
 if __name__ == '__main__':
