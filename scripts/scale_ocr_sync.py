@@ -163,22 +163,22 @@ def extract_data_from_image(image_path):
     patterns = {
         'weight_kg': r'(?i)Weight\s+(\d{2,3}\.\d+)kg',
         'bmi': r'(?i)BMI\s+(\d{1,2}\.\d+)',
-        'body_fat_pct': r'(?i)Body Fat\s+(\d{1,2}\.\d+)%',
+        'body_fat_pct': r'(?i)Body Fat(?: rate)?\s+(\d{1,2}\.\d+)%',
         'fat_mass_kg': r'(?i)Fat Mass\s+(\d{1,3}\.\d+)kg',
         'fat_free_body_weight_kg': r'(?i)Fat-free Body Weight\s+(\d{2,3}\.\d+)kg',
         'muscle_mass_kg': r'(?i)Muscle Mass\s+(\d{2,3}\.\d+)kg',
         'muscle_rate_pct': r'(?i)Muscle Rate\s+(\d{2,3}\.\d+)%',
-        'skeletal_muscle_pct': r'(?i)Skeletal Muscle\s+(\d{1,3}\.\d+)%',
+        'skeletal_muscle_pct': r'(?i)Skeletal Muscle(?: rate)?\s+(\d{1,3}\.\d+)%',
         'bone_mass_kg': r'(?i)Bone Mass\s+(\d{1,2}\.\d+)kg',
         'protein_mass_kg': r'(?i)Protein Mass\s+(\d{1,3}\.\d+)kg',
         'protein_pct': r'(?i)Protein\s+(\d{1,3}\.\d+)%',
-        'water_weight_kg': r'(?i)Water Weight\s+(\d{2,3}\.\d+)kg',
+        'water_weight_kg': r'(?i)Water (?:Weight|content)\s+(\d{2,3}\.\d+)kg',
         'body_water_pct': r'(?i)Body Water\s+(\d{1,3}\.\d+)%',
         'subcutaneous_fat_pct': r'(?i)Subcutaneous fat\s+(\d{1,3}\.\d+)%',
         'visceral_fat': r'(?i)Visceral Fat\s+(\d{1,2}\.\d+)',
         'bmr_kcal': r'(?i)BMR\s+(\d{3,4})kca[il]',
         'body_age': r'(?i)Body age\s+(\d{1,3})',
-        'ideal_body_weight_kg': r'(?i)Ideal body weight\s+(\d{2,3}\.\d+)kg'
+        'ideal_body_weight_kg': r'(?i)(?:Ideal|Standard) body weight\s+(\d{2,3}\.\d+)kg'
     }
     
     for key, pattern in patterns.items():
@@ -203,6 +203,7 @@ def extract_data_from_image(image_path):
             data['bmi'] = float(combo_matches.group(2))
             
     print(f"[OCR] Extracted Data: {data}")
+    print(f"[OCR] Raw Text:\n{raw_text}\n{'='*40}")
     return data, raw_text
 
 def parse_date_from_filename(filename):

@@ -56,3 +56,6 @@ dev.db
 /scripts/*.jpg
 /scripts/*.jpeg
 /scripts/*.png 
+
+# Data
+/src/data/
