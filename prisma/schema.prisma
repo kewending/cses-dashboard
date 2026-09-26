@@ -35,6 +35,8 @@ model Task {
 
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
+  
+  identityVotes          IdentityVote[]
 }
 
 model Session {
@@ -135,6 +137,8 @@ model Interaction {
   summary      String
   sourceModule String   @default("manual") // manual | journal (future hook)
   createdAt    DateTime @default(now())
+  
+  identityVotes IdentityVote[]
 }
 
 model ContactRelation {
@@ -252,6 +256,8 @@ model DailyLog {
   
   linkedNotes  DailyLogLink[]
   crmLinks     CRMInteractionLink[]
+  
+  identityVotes IdentityVote[]
 
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
@@ -378,4 +384,80 @@ model PeriodicAssessment {
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+// ─── Identity & Cybernetics Module ────────────────────────────────────────────
+
+model IdentityManifesto {
+  id              String   @id @default(cuid())
+  archetype       String   @default("Sovereign Creator")
+  statement       String   @default("I am the type of person who executes without hesitation.")
+  antiVision      String   @default("I will never become someone who...")
+  mvpVision       String   @default("My ideal week consists of...")
+  birthday        String   @default("2000-01-01") // YYYY-MM-DD
+  avatarUrl       String?
+  
+  updatedAt       DateTime @updatedAt
+}
+
+model LogOddsState {
+  id              String   @id @default(cuid())
+  currentLogOdds  Float    @default(-4.5)
+  difficultyBeta0 Int      @default(90)     // e.g., 90 (Normal), 365 (Hard), 3650 (Hell)
+  lastDecayDate   String?  // YYYY-MM-DD, to track when the -0.1 entropy decay was last applied
+  
+  updatedAt       DateTime @updatedAt
+}
+
+model IdentityVote {
+  id              String   @id @default(cuid())
+  date            String   // YYYY-MM-DD
+  timestamp       DateTime @default(now())
+  
+  logOddsValue    Float    // e.g. +0.5, -0.8
+  description     String   // e.g. "Completed Deep Work", "Scrolled Tiktok"
+  
+  // Full Context Foreign Keys
+  taskId          String?
+  task            Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  
+  dailyLogId      String?
+  dailyLog        DailyLog? @relation(fields: [dailyLogId], references: [id], onDelete: SetNull)
+  
+  interactionId   String?
+  interaction     Interaction? @relation(fields: [interactionId], references: [id], onDelete: SetNull)
+}
+
+model Habit {
+  id          String   @id @default(cuid())
+  title       String
+  notes       String?
+  
+  isPositive  Boolean  @default(true)
+  isNegative  Boolean  @default(false)
+  difficulty  String   @default("Medium") // Trivial, Easy, Medium, Hard, Very Hard
+  
+  logs        HabitLog[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model HabitLog {
+  id            String   @id @default(cuid())
+  habitId       String
+  habit         Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  
+  date          String   // YYYY-MM-DD
+  countPositive Int      @default(0)
+  countNegative Int      @default(0)
+  
+  @@unique([habitId, date])
+}
+
+model ActiveEffect {
+  id          String   @id @default(cuid())
+  title       String
+  isPositive  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

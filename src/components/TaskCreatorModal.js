@@ -82,10 +82,10 @@ export default function TaskCreatorModal({ config, onClose, onAdd, projects = []
           <div className="flex items-center gap-1.5 hover:text-[var(--color-text-main)] transition-colors flex-shrink-0 mt-2">
             <span>🚩</span>
             <select value={priority} onChange={e => setPriority(e.target.value)} className="bg-transparent focus:outline-none cursor-pointer">
-              <option>None</option>
-              <option>Low</option>
-              <option>Medium</option>
-              <option>High</option>
+              <option value="None">Priority 4</option>
+              <option value="Low">Priority 3</option>
+              <option value="Medium">Priority 2</option>
+              <option value="High">Priority 1</option>
             </select>
           </div>
           <div className="flex items-center gap-1.5 hover:text-[var(--color-text-main)] transition-colors flex-shrink-0 mt-2">

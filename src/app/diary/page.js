@@ -1,6 +1,5 @@
 import prisma from '@/lib/prisma';
-import SecondBrainEditor from '@/components/Editor/SecondBrainEditor';
-import BacklinkPanel from '@/components/KnowledgeGraph/BacklinkPanel';
+import DiaryClientWrapper from './DiaryClientWrapper';
 
 async function getDailyLog(dateStr) {
   let log = await prisma.dailyLog.findUnique({
@@ -52,12 +51,15 @@ async function getDailyWeather() {
   }
 }
 
-export default async function JournalDeepWork() {
+export default async function JournalDeepWork({ searchParams }) {
   // Use today's date for the journal page by default
   const today = new Date();
   // Adjust for local timezone to get correct YYYY-MM-DD
   const offset = today.getTimezoneOffset();
-  const dateStr = new Date(today.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+  const todayStr = new Date(today.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+
+  const dateStr = searchParams?.date || todayStr;
+  const isShutdown = searchParams?.from === 'shutdown';
 
   const [dailyLog, tasks, weather] = await Promise.all([
     getDailyLog(dateStr),
@@ -89,32 +91,25 @@ export default async function JournalDeepWork() {
         )}
       </header>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-12">
-        <SecondBrainEditor
-          initialContent={initialContent}
-          onSave={async (html) => {
-            'use server';
-            await prisma.dailyLog.upsert({
-              where: { date: dateStr },
-              update: { content: html },
-              create: {
-                date: dateStr,
-                content: html,
-                weatherData: weather ? JSON.stringify(weather) : null
-              }
-            });
-          }}
-          onExtract={async (text) => {
-            'use server';
-            // Handle 1-click extract logic
-          }}
-        />
-
-        <BacklinkPanel
-          backlinks={[]}
-          dailyLogMentions={[]}
-        />
-      </div>
+      <DiaryClientWrapper 
+        initialContent={initialContent}
+        dateStr={dateStr}
+        isShutdown={isShutdown}
+        dailyLogId={dailyLog?.id}
+        weather={weather}
+        onSaveAction={async (html) => {
+          'use server';
+          await prisma.dailyLog.upsert({
+            where: { date: dateStr },
+            update: { content: html },
+            create: {
+              date: dateStr,
+              content: html,
+              weatherData: weather ? JSON.stringify(weather) : null
+            }
+          });
+        }}
+      />
     </div>
   );
 }

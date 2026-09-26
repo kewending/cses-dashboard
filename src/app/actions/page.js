@@ -15,6 +15,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { getTasks, getSessions, getObjectives, createTask, updateTask, toggleTaskComplete, createSession, updateSession, deleteSession, createSubtask, deleteTask, reorderSubtasks, getProjects, createProject, updateProject, deleteProject, createObjective, deleteObjective, reorderProjects, updateObjective } from './serverActions';
+import { castVote } from './identityActions';
 
 // --- MOCK DATA ---
 // Removed unused mock data
@@ -35,6 +36,7 @@ import ShutdownView from '@/components/ShutdownView';
 import KanbanColumn from '@/components/KanbanColumn';
 import ProjectsView from '@/components/ProjectsView';
 import GanttView from '@/components/GanttView';
+import HabitsView from '@/components/HabitsView';
 import { HOURS, DAYS_OF_WEEK, formatRelativeDate, formatAbsoluteDate, getProjectionDays, formatActualTime, formatMins, formatSessionTime, isNextFewDays } from '@/lib/utils';
 
 
@@ -108,6 +110,9 @@ export default function ActionEngine() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [focusType, setFocusType] = useState('focus');
 
+  // Identity Hybrid Logging
+  const [identityToast, setIdentityToast] = useState(null);
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   // --- TIME TRACKER ENGINE ---
@@ -115,16 +120,16 @@ export default function ActionEngine() {
 
   useEffect(() => {
     if (!activeTimer) return;
-    
+
     lastTickRef.current = Date.now();
-    
+
     const interval = setInterval(() => {
       const now = Date.now();
       const elapsedSeconds = Math.floor((now - lastTickRef.current) / 1000);
-      
+
       if (elapsedSeconds > 0) {
         lastTickRef.current += elapsedSeconds * 1000;
-        
+
         setTasks(prev => prev.map(t => {
           if (activeTimer.type === 'task' && activeTimer.id === t.id) {
             return { ...t, actualDurationSeconds: t.actualDurationSeconds + elapsedSeconds };
@@ -185,6 +190,10 @@ export default function ActionEngine() {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
     const newIsCompleted = !task.isCompleted;
+
+    if (newIsCompleted && task.priority === 'High') {
+      setIdentityToast(task);
+    }
 
     // Auto-fill actual time when completing a task that has 0 actual time tracked
     // (preserves real tracked time — only fills when actual is still 0)
@@ -312,7 +321,7 @@ export default function ActionEngine() {
           const task = tasks.find(t => t.id === session.taskId);
           const duration = task ? task.plannedDurationMinutes : 60;
           exactMins = resolveOverlap(exactMins, duration, active.id);
-          
+
           setSessions(prev => prev.map(s => s.id === session.id ? { ...s, startMinutes: exactMins } : s));
           updateSession(session.id, { startMinutes: exactMins, date: baseDate }); // fire-and-forget DB sync
         }
@@ -415,10 +424,10 @@ export default function ActionEngine() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-shrink-0">
         <div className="flex items-center gap-3">
-          {viewMode !== 'projects' && viewMode !== 'gantt' && (
+          {viewMode !== 'projects' && viewMode !== 'gantt' && viewMode !== 'habits' && (
             <DateSelectorDropdown baseDate={baseDate} setBaseDate={setBaseDate} />
           )}
-          
+
           {viewMode === 'projects' ? (
             <div className="relative z-50 group">
               <button className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-dark)] text-[var(--color-text-main)] rounded border border-[var(--color-border)] hover:bg-[var(--color-bg-panel-hover)] text-sm font-semibold shadow-sm transition-colors">
@@ -452,11 +461,17 @@ export default function ActionEngine() {
                 </div>
               </div>
             </div>
-          ) : viewMode === 'gantt' ? null : (
+          ) : viewMode === 'gantt' || viewMode === 'habits' ? null : (
             <FilterDropdown taskFilter={taskFilter} setTaskFilter={setTaskFilter} allTags={allTags} />
           )}
         </div>
         <div className="flex gap-2 bg-[var(--color-bg-dark)] p-1 rounded-full border border-[var(--color-border)]">
+          <button
+            onClick={() => setViewMode('habits')}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${viewMode === 'habits' ? 'bg-[var(--color-accent)] text-[var(--color-text-main)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}
+          >
+            Habits
+          </button>
           <button
             onClick={() => setViewMode('daily')}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${viewMode === 'daily' ? 'bg-[var(--color-accent)] text-[var(--color-text-main)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}
@@ -484,6 +499,26 @@ export default function ActionEngine() {
         </div>
       </div>
 
+      {/* Identity Toast */}
+      {identityToast && (
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[100] bg-[var(--color-bg-panel)] border border-[var(--color-accent)] shadow-2xl rounded-xl p-4 w-[400px] animate-in slide-in-from-top-10 fade-in duration-300">
+          <h4 className="text-[var(--color-accent)] font-bold mb-2">High Priority Task Completed!</h4>
+          <p className="text-sm text-[var(--color-text-main)] mb-4">You just completed "{identityToast.title}". Do you want to claim a +0.5 Identity Vote for acting as the Sovereign Creator?</p>
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setIdentityToast(null)} className="px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]">Skip</button>
+            <button
+              onClick={async () => {
+                await castVote({ logOddsValue: 0.5, description: `Completed High Priority Task: ${identityToast.title}`, taskId: identityToast.id });
+                setIdentityToast(null);
+              }}
+              className="px-4 py-1.5 text-sm font-bold bg-[var(--color-accent)] text-white rounded-lg hover:brightness-110"
+            >
+              Claim +0.5 Vote
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Task Creator Modal */}
       {taskCreatorConfig && (
         <TaskCreatorModal
@@ -498,7 +533,9 @@ export default function ActionEngine() {
       <DndContext id="action-dnd" sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex-1 flex gap-4 min-h-0 overflow-x-auto pb-4">
 
-          {viewMode === 'gantt' ? (
+          {viewMode === 'habits' ? (
+            <HabitsView />
+          ) : viewMode === 'gantt' ? (
             <GanttView
               objectives={objectives}
               projects={projects}
@@ -512,14 +549,14 @@ export default function ActionEngine() {
               onOpenObjective={(id) => { setDetailObjectiveId(id); }}
             />
           ) : viewMode === 'projects' ? (
-            <ProjectsView 
+            <ProjectsView
               projects={projects.filter(p => {
                 if (objectiveFilter === 'all') return true;
                 if (objectiveFilter === 'unassigned') return !p.objectiveId;
                 return p.objectiveId === objectiveFilter;
-              })} 
+              })}
               allProjects={projects}
-              objectives={objectives} 
+              objectives={objectives}
               tasks={tasks}
               setTasks={setTasks}
               setProjects={setProjects}
@@ -682,8 +719,8 @@ export default function ActionEngine() {
           }}
           createProject={createProject}
           onOpenTask={setDetailTaskId}
-          onAddTaskClick={() => {
-             // Not supported easily without global TaskCreator config
+          onAddTaskClick={(config) => {
+            setTaskCreatorConfig(config);
           }}
           setDetailObjectiveId={setDetailObjectiveId}
           setDetailProjectId={setDetailProjectId}

@@ -17,8 +17,7 @@ export default function Sidebar({ defaultCollapsed = false }) {
   };
 
   const navItems = [
-    { icon: "🏠", label: "Dashboard", href: "/" },
-    { icon: "🧠", label: "Core Identity & Vision", href: "/identity" },
+    { icon: "🛡️", label: "Character Dashboard", href: "/" },
     { icon: "⚙️", label: "Action Engine", href: "/actions" },
     { icon: "📚", label: "Second Brain", href: "/journal" },
     { icon: "📝", label: "Daily Diary", href: "/diary" },

@@ -3,6 +3,7 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { formatActualTime } from '@/lib/utils';
 import KanbanColumn from './KanbanColumn';
+import { useRouter } from 'next/navigation';
 
 export default function ShutdownView({
   dateStr,
@@ -17,6 +18,7 @@ export default function ShutdownView({
   onDeleteTask
 }) {
   const shutdownTasks = tasks.filter(t => t.startDate === dateStr);
+  const router = useRouter();
 
   const formatHrsMins = (secs) => {
     const hrs = Math.floor(secs / 3600);
@@ -127,7 +129,7 @@ export default function ShutdownView({
 
               {/* Tooltip Planned */}
               <div
-                className="absolute top-6 -translate-x-1/2 bg-[var(--color-bg-panel)]0 text-[var(--color-text-main)] text-[10px] font-bold py-1 px-2 rounded flex flex-col items-center whitespace-nowrap"
+                className="absolute top-6 -translate-x-1/2 bg-[var(--color-bg-panel)] text-[var(--color-text-main)] text-[10px] font-bold py-1 px-2 rounded flex flex-col items-center whitespace-nowrap"
                 style={{ left: `${Math.min(100, plannedPercent)}%` }}
               >
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-500"></div>
@@ -179,6 +181,13 @@ export default function ShutdownView({
               ))}
             </div>
           </div>
+
+          <button 
+            onClick={() => router.push(`/diary/${dateStr}?from=shutdown`)}
+            className="w-full mt-4 py-3 bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)] text-[var(--color-accent)] hover:text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 shadow-sm"
+          >
+            📔 Begin Daily Reflection
+          </button>
         </div>
       </div>
 

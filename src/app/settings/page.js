@@ -1,11 +1,64 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../lib/SettingsContext';
+import { getIdentityData, updateDifficulty, updateManifesto, createActiveEffect, deleteActiveEffect } from '../actions/identityActions';
 
 export default function SettingsPage() {
   const { settings, updateSettings, isLoaded } = useSettings();
   const [activeTab, setActiveTab] = useState('general');
+
+  const [manifestoForm, setManifestoForm] = useState(null);
+  const [identityData, setIdentityData] = useState(null);
+  const [activeEffects, setActiveEffects] = useState([]);
+  const [newEffect, setNewEffect] = useState({ title: '', isPositive: true });
+
+  useEffect(() => {
+    async function loadIdentity() {
+      const res = await getIdentityData();
+      if (res.success) {
+        setIdentityData(res.logOddsState);
+        setManifestoForm(res.manifesto);
+        setActiveEffects(res.activeEffects || []);
+      }
+    }
+    loadIdentity();
+  }, []);
+
+  const handleDifficultyChange = async (e) => {
+    const beta0 = parseInt(e.target.value);
+    const res = await updateDifficulty(beta0);
+    if (res.success) {
+      setIdentityData(res.data);
+    }
+  };
+
+  const handleManifestoSave = async () => {
+    if (!manifestoForm) return;
+    const res = await updateManifesto(manifestoForm);
+    if (res.success) {
+      alert("Manifesto saved!");
+    }
+  };
+
+  const handleAddEffect = async () => {
+    if (!newEffect.title.trim()) return;
+    const res = await createActiveEffect({ 
+      title: newEffect.title, 
+      isPositive: newEffect.isPositive 
+    });
+    if (res.success) {
+      setActiveEffects([res.effect, ...activeEffects]);
+      setNewEffect({ title: '', isPositive: true });
+    }
+  };
+
+  const handleDeleteEffect = async (id) => {
+    const res = await deleteActiveEffect(id);
+    if (res.success) {
+      setActiveEffects(activeEffects.filter(h => h.id !== id));
+    }
+  };
 
   if (!isLoaded) return <div className="p-8 text-[var(--color-text-muted)]">Loading settings...</div>;
 
@@ -14,6 +67,7 @@ export default function SettingsPage() {
     { id: 'finance', label: '💰 Finance' },
     { id: 'crm', label: '👥 CRM (Relationships)' },
     { id: 'tasks', label: '⏱️ Tasks & Timeline' },
+    { id: 'diary', label: '📔 Diary & Identity' },
   ];
 
   const handleCrmTierChange = (index, field, value) => {
@@ -44,6 +98,10 @@ export default function SettingsPage() {
 
   const handleFinanceChange = (field, value) => {
     updateSettings('finance', { ...settings.finance, [field]: value });
+  };
+
+  const handleDiaryChange = (field, value) => {
+    updateSettings('diary', { ...settings.diary, [field]: value });
   };
 
   return (
@@ -208,6 +266,148 @@ export default function SettingsPage() {
                     min="1" max="60"
                   />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'diary' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <h2 className="text-xl font-bold border-b border-[var(--color-border)] pb-4">Diary & Identity</h2>
+              
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-[var(--color-text-muted)]">Evening Shutdown Template</label>
+                <p className="text-xs text-[var(--color-text-muted)] mb-2">This HTML template will be automatically inserted into your daily log when you click "Begin Daily Reflection" from the Shutdown view.</p>
+                <textarea 
+                  value={settings.diary?.shutdownTemplate || ''}
+                  onChange={(e) => handleDiaryChange('shutdownTemplate', e.target.value)}
+                  className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-4 text-[var(--color-text-main)] outline-none focus:border-[var(--color-accent)] transition-colors min-h-[200px] font-mono text-sm"
+                  placeholder="Enter HTML template..."
+                />
+              </div>
+
+              <div className="space-y-3 mt-8 pt-8 border-t border-[var(--color-border)]">
+                <label className="text-sm font-semibold text-[var(--color-text-muted)]">Identity Resistance Level (β₀)</label>
+                <p className="text-xs text-[var(--color-text-muted)] mb-2">Controls how hard it is to change your identity via habits.</p>
+                {identityData ? (
+                  <select 
+                    className="w-full max-w-xs bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-[var(--color-text-main)] outline-none focus:border-[var(--color-accent)] transition-colors"
+                    value={identityData.difficultyBeta0}
+                    onChange={handleDifficultyChange}
+                  >
+                    <option value={90}>Normal (90 Days)</option>
+                    <option value={365}>Hard (1 Year)</option>
+                    <option value={3650}>Hell (10 Years)</option>
+                  </select>
+                ) : (
+                  <div className="text-xs text-[var(--color-text-muted)] animate-pulse">Loading...</div>
+                )}
+              </div>
+
+              <div className="space-y-6 mt-8 pt-8 border-t border-[var(--color-border)]">
+                <h3 className="text-lg font-bold">Active Buffs / Debuffs</h3>
+                
+                <div className="flex gap-4 items-center">
+                  <input 
+                    type="text"
+                    value={newEffect.title}
+                    onChange={(e) => setNewEffect({ ...newEffect, title: e.target.value })}
+                    placeholder="E.g., Deep Work, Influenza, Doomscrolling..."
+                    className="flex-1 bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-sm outline-none focus:border-[var(--color-accent)]"
+                  />
+                  <select 
+                    value={newEffect.isPositive}
+                    onChange={(e) => setNewEffect({ ...newEffect, isPositive: e.target.value === 'true' })}
+                    className="bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-sm outline-none focus:border-[var(--color-accent)]"
+                  >
+                    <option value="true">🟢 Buff (Positive)</option>
+                    <option value="false">🔴 Debuff (Negative)</option>
+                  </select>
+                  <button 
+                    onClick={handleAddEffect}
+                    className="px-6 py-3 bg-[var(--color-accent)] text-white text-sm rounded-lg font-bold hover:brightness-110 transition-all"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  {activeEffects.map(h => (
+                     <div key={h.id} className={`flex items-center gap-2 px-3 py-1.5 rounded border ${h.isPositive ? 'bg-green-900/20 text-green-400 border-green-900/30' : 'bg-red-900/20 text-red-400 border-red-900/30'}`}>
+                       <span className="text-sm font-medium">{h.title}</span>
+                       <button onClick={() => handleDeleteEffect(h.id)} className="opacity-50 hover:opacity-100 ml-2 font-bold text-lg leading-none">&times;</button>
+                     </div>
+                  ))}
+                  {activeEffects.length === 0 && <span className="text-sm text-[var(--color-text-muted)] italic">No active buffs/debuffs found.</span>}
+                </div>
+              </div>
+
+              <div className="space-y-6 mt-8 pt-8 border-t border-[var(--color-border)]">
+                <h3 className="text-lg font-bold">Identity Manifesto</h3>
+                
+                {manifestoForm ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-[var(--color-text-muted)]">Archetype</label>
+                      <input 
+                        type="text"
+                        value={manifestoForm.archetype}
+                        onChange={e => setManifestoForm({...manifestoForm, archetype: e.target.value})}
+                        className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-[var(--color-text-main)] outline-none focus:border-[var(--color-accent)]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-[var(--color-text-muted)]">Avatar URL</label>
+                      <input 
+                        type="text"
+                        value={manifestoForm.avatarUrl || ''}
+                        onChange={e => setManifestoForm({...manifestoForm, avatarUrl: e.target.value})}
+                        placeholder="https://example.com/avatar.png"
+                        className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-[var(--color-text-main)] outline-none focus:border-[var(--color-accent)]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-[var(--color-text-muted)]">Birthday</label>
+                      <input 
+                        type="date"
+                        value={manifestoForm.birthday || '2000-01-01'}
+                        onChange={e => setManifestoForm({...manifestoForm, birthday: e.target.value})}
+                        className="w-full max-w-xs bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-[var(--color-text-main)] outline-none focus:border-[var(--color-accent)]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-[var(--color-text-muted)]">Core Statement</label>
+                      <textarea 
+                        value={manifestoForm.statement}
+                        onChange={e => setManifestoForm({...manifestoForm, statement: e.target.value})}
+                        className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-[var(--color-text-main)] outline-none focus:border-[var(--color-accent)] min-h-[80px]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-[var(--color-text-muted)]">Anti-Vision</label>
+                      <textarea 
+                        value={manifestoForm.antiVision}
+                        onChange={e => setManifestoForm({...manifestoForm, antiVision: e.target.value})}
+                        className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-[var(--color-text-main)] outline-none focus:border-[var(--color-accent)] min-h-[100px]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-[var(--color-text-muted)]">MVP Vision</label>
+                      <textarea 
+                        value={manifestoForm.mvpVision}
+                        onChange={e => setManifestoForm({...manifestoForm, mvpVision: e.target.value})}
+                        className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-[var(--color-text-main)] outline-none focus:border-[var(--color-accent)] min-h-[100px]"
+                      />
+                    </div>
+                    <button 
+                      onClick={handleManifestoSave}
+                      className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg font-bold hover:brightness-110 transition-all"
+                    >
+                      Save Manifesto
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-xs text-[var(--color-text-muted)] animate-pulse">Loading...</div>
+                )}
               </div>
             </div>
           )}

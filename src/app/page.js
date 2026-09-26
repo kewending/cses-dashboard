@@ -1,453 +1,359 @@
-"use client";
+'use client';
+import React, { useState, useEffect } from 'react';
+import { getIdentityData, getCyberneticQuests, getDashboardStats } from './actions/identityActions';
+import Link from 'next/link';
+import Image from 'next/image';
 
-import { useState } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragOverlay,
-  useDraggable,
-  useDroppable
-} from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
+// Helper for life progress calculation
+function calculateLifeProgress(birthdayStr) {
+  const now = new Date();
 
-// --- Core Tree Helpers ---
-const cloneTree = (nodes) => JSON.parse(JSON.stringify(nodes));
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const endOfYear = new Date(now.getFullYear() + 1, 0, 1);
+  const yearProgress = ((now - startOfYear) / (endOfYear - startOfYear)) * 100;
 
-const findBlockPath = (nodes, id, path = []) => {
-  for (let i = 0; i < nodes.length; i++) {
-    if (nodes[i].id === id) return [...path, i];
-    if (nodes[i].children) {
-      const childPath = findBlockPath(nodes[i].children, id, [...path, i]);
-      if (childPath) return childPath;
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const monthProgress = ((now - startOfMonth) / (endOfMonth - startOfMonth)) * 100;
+
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const dayProgress = ((now - startOfDay) / (endOfDay - startOfDay)) * 100;
+
+  // Life
+  const birthday = birthdayStr ? new Date(birthdayStr) : new Date(2000, 0, 1);
+  const lifespanYears = 80;
+  const endOfLife = new Date(birthday.getFullYear() + lifespanYears, birthday.getMonth(), birthday.getDate());
+  const lifeProgress = ((now - birthday) / (endOfLife - birthday)) * 100;
+
+  const totalDays = Math.floor((now - birthday) / (1000 * 60 * 60 * 24));
+  const ageYears = Math.floor(totalDays / 365.25);
+  const ageDays = Math.floor(totalDays % 365.25);
+
+  return {
+    year: yearProgress,
+    month: monthProgress,
+    day: dayProgress,
+    life: lifeProgress,
+    ageText: `${ageYears} yrs (${ageDays} days)`
+  };
+}
+
+export default function HomeRPGPage() {
+  const [data, setData] = useState(null);
+  const [quests, setQuests] = useState(null);
+  const [stats, setStats] = useState({ netWorth: 0, networkCount: 0 });
+  const [weather, setWeather] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [progressData, setProgressData] = useState(null);
+
+  useEffect(() => {
+    async function load() {
+      const [identityRes, questRes, statsRes, weatherRes] = await Promise.all([
+        getIdentityData(),
+        getCyberneticQuests(),
+        getDashboardStats(),
+        fetch('/api/weather').then(res => res.json()).catch(() => null)
+      ]);
+
+      if (identityRes.success) setData(identityRes);
+      if (questRes.success) setQuests(questRes);
+      if (statsRes && statsRes.success) setStats(statsRes);
+      if (weatherRes && !weatherRes.error) setWeather(weatherRes);
+
+      setProgressData(calculateLifeProgress(identityRes.success ? identityRes.manifesto?.birthday : null));
+      setLoading(false);
     }
-  }
-  return null;
-};
 
-const getBlockAtPath = (nodes, path) => {
-  let current = nodes;
-  for (let i = 0; i < path.length - 1; i++) {
-    current = current[path[i]].children;
-  }
-  return current[path[path.length - 1]];
-};
+    load();
+    const interval = setInterval(() => {
+      // Use functional state update to avoid stale data reference
+      setProgressData((prev) => calculateLifeProgress(document.getElementById('hidden-birthday')?.value || '2000-01-01'));
+    }, 60000); // update every minute
 
-const removeBlockAtPath = (nodes, path) => {
-  let current = nodes;
-  for (let i = 0; i < path.length - 1; i++) {
-    current = current[path[i]].children;
-  }
-  const [removed] = current.splice(path[path.length - 1], 1);
-  return removed;
-};
+    return () => clearInterval(interval);
+  }, []);
 
-const insertBlockAtPath = (nodes, path, block) => {
-  let current = nodes;
-  for (let i = 0; i < path.length - 1; i++) {
-    if (!current[path[i]].children) current[path[i]].children = [];
-    current = current[path[i]].children;
-  }
-  current.splice(path[path.length - 1], 0, block);
-};
-
-const gc = (nodes) => {
-  for (let i = nodes.length - 1; i >= 0; i--) {
-    const node = nodes[i];
-    if (node.children) {
-      gc(node.children);
-      if (node.type === 'column' && node.children.length === 0) {
-        nodes.splice(i, 1);
-      } else if (node.type === 'column_list') {
-        if (node.children.length === 0) {
-          nodes.splice(i, 1);
-        } else if (node.children.length === 1) {
-          const childrenToHoist = node.children[0].children || [];
-          nodes.splice(i, 1, ...childrenToHoist);
-        }
-      }
-    }
-  }
-};
-
-const generateId = () => Math.random().toString(36).substr(2, 9);
-
-// --- Widget Component ---
-function WidgetWrapper({ id, children, height, onResize, indicator, activeId }) {
-  const { setNodeRef: setDroppableRef } = useDroppable({ id });
-  const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({ id });
-
-  const setRefs = (node) => {
-    setDroppableRef(node);
-    setDraggableRef(node);
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
   };
 
-  const isTarget = indicator?.id === id;
-  const dir = indicator?.direction;
-
-  let borderClasses = '';
-  if (isTarget && !isDragging) {
-    if (dir === 'TOP') borderClasses = 'border-t-4 border-t-blue-500 shadow-[0_-10px_20px_-5px_rgba(59,130,246,0.6)] pt-1';
-    if (dir === 'BOTTOM') borderClasses = 'border-b-4 border-b-blue-500 shadow-[0_10px_20px_-5px_rgba(59,130,246,0.6)] pb-1';
-    if (dir === 'LEFT') borderClasses = 'border-l-4 border-l-blue-500 shadow-[-10px_0_20px_-5px_rgba(59,130,246,0.6)] pl-1';
-    if (dir === 'RIGHT') borderClasses = 'border-r-4 border-r-blue-500 shadow-[10px_0_20px_-5px_rgba(59,130,246,0.6)] pr-1';
-  }
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    zIndex: isDragging ? 50 : 1,
-    opacity: isDragging ? 0.2 : 1,
-    height: height || 'auto',
-    minHeight: '120px',
+  const getConfidencePercentage = (logOdds) => {
+    const p = 1 / (1 + Math.exp(-logOdds));
+    return (p * 100).toFixed(1);
   };
 
-  return (
-    <div ref={setRefs} style={style} className={`relative group/widget flex-shrink-0 w-full ${borderClasses}`}>
-      <div {...attributes} {...listeners} className="absolute top-0 left-0 w-full h-14 cursor-grab active:cursor-grabbing z-10 rounded-t-2xl"></div>
-      <div className="h-full pointer-events-auto relative z-0">{children}</div>
-      <div 
-        className="absolute bottom-[-8px] left-0 w-full h-4 cursor-row-resize opacity-0 group-hover/widget:opacity-100 transition-opacity flex items-center justify-center z-20"
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          const widgetNode = e.target.closest('.group\\/widget');
-          const startY = e.clientY;
-          const startHeight = height ? parseInt(height) : widgetNode.offsetHeight;
-          const onMove = (moveEvent) => {
-            const newHeight = Math.max(120, startHeight + (moveEvent.clientY - startY));
-            widgetNode.style.height = `${newHeight}px`;
-          };
-          const onUp = (upEvent) => {
-            const finalHeight = Math.max(120, startHeight + (upEvent.clientY - startY));
-            onResize(id, `${finalHeight}px`);
-            document.removeEventListener('pointermove', onMove);
-            document.removeEventListener('pointerup', onUp);
-          };
-          document.addEventListener('pointermove', onMove);
-          document.addEventListener('pointerup', onUp);
-        }}
-      >
-        <div className="h-1.5 w-12 bg-[var(--color-glass-border)] rounded-full hover:bg-[var(--color-accent)] transition-colors shadow-[0_0_10px_var(--color-bg-dark)] border border-[var(--color-glass-border)]"></div>
+  if (loading) return <div className="flex h-full items-center justify-center text-[var(--color-accent)] animate-pulse font-mono text-xl">Loading Character OS...</div>;
+  if (!data) return <div className="p-8 text-red-500">Failed to load Character Data</div>;
+
+  const confPercent = getConfidencePercentage(data.logOddsState.currentLogOdds);
+  const level = Math.max(1, Math.floor((data.logOddsState.currentLogOdds + 10) * 2));
+  const name = data.manifesto.archetype || "Commander";
+
+  const ProgressBar = ({ label, value, colorClass }) => (
+    <div className="space-y-1">
+      <div className="flex justify-between text-[10px] text-[var(--color-text-muted)] font-mono uppercase tracking-wider">
+        <span>{label}</span>
+        <span>{value.toFixed(1)}%</span>
+      </div>
+      <div className="h-1.5 bg-[var(--color-bg-dark)] rounded-full overflow-hidden">
+        <div className={`h-full ${colorClass}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }}></div>
       </div>
     </div>
   );
-}
 
-export default function Dashboard() {
-  const [rootBlocks, setRootBlocks] = useState([
-    {
-      id: 'row-1',
-      type: 'column_list',
-      children: [
-        { id: 'col-1', type: 'column', width: 50, children: [{ id: 'health', type: 'widget', content: 'health', height: '280px' }] },
-        { id: 'col-2', type: 'column', width: 50, children: [{ id: 'ai', type: 'widget', content: 'ai', height: '280px' }] }
-      ]
-    },
-    {
-      id: 'row-2',
-      type: 'column_list',
-      children: [
-        { id: 'col-3', type: 'column', width: 33, children: [{ id: 'tasks', type: 'widget', content: 'tasks', height: '320px' }] },
-        { id: 'col-4', type: 'column', width: 33, children: [{ id: 'calendar', type: 'widget', content: 'calendar', height: '320px' }] },
-        { id: 'col-5', type: 'column', width: 33, children: [{ id: 'metrics', type: 'widget', content: 'metrics', height: '320px' }] }
-      ]
-    },
-    { id: 'journal', type: 'widget', content: 'journal', height: '100px' }
-  ]);
+  return (
+    <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 space-y-6 text-[var(--color-text-main)] animate-in fade-in duration-500 h-full overflow-y-auto custom-scrollbar">
 
-  const [activeId, setActiveId] = useState(null);
-  const [indicator, setIndicator] = useState(null);
+      {/* HEADER: Greeting & Weather */}
+      <div className="flex justify-between items-end border-b border-[var(--color-border)] pb-4 mb-6">
+        <h1 className="text-2xl font-light tracking-wide">
+          {getGreeting()}, <span className="font-bold text-[var(--color-accent)] uppercase">{name}</span>
+        </h1>
+        <div className="text-sm font-mono text-[var(--color-text-muted)] flex items-center gap-3 bg-[var(--color-bg-panel)] px-4 py-2 rounded-lg border border-[var(--color-border)] shadow-sm">
+          {weather ? (
+            <>
+              <span className="text-lg">{weather.icon}</span>
+              <span className="opacity-30">|</span>
+              <span>{weather.high}°C / {weather.low}°C</span>
+            </>
+          ) : (
+            <>
+              <span className="text-lg">🌤️</span>
+              <span>--°C / --°C</span>
+            </>
+          )}
+          <span className="opacity-30">|</span>
+          <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+        </div>
+      </div>
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+      <div className="flex flex-col lg:flex-row gap-6 items-stretch">
 
-  const handleResize = (id, newHeight) => {
-    const next = cloneTree(rootBlocks);
-    const path = findBlockPath(next, id);
-    if (path) {
-      const block = getBlockAtPath(next, path);
-      block.height = newHeight;
-      setRootBlocks(next);
-    }
-  };
+        {/* LEFT COLUMN: Hero, Stats, Combat Log */}
+        <div className="w-full lg:w-[320px] flex-shrink-0 flex flex-col gap-6">
 
-  const handleDragStart = (event) => {
-    setActiveId(event.active.id);
-  };
-
-  const handleDragOver = (event) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) {
-      setIndicator(null);
-      return;
-    }
-    const overRect = over.rect;
-    const activeRect = active.rect.current.translated;
-    if (!overRect || !activeRect) return;
-
-    const activeCenterX = activeRect.left + activeRect.width / 2;
-    const activeCenterY = activeRect.top + activeRect.height / 2;
-    const x = activeCenterX - overRect.left;
-    const y = activeCenterY - overRect.top;
-
-    let dir = 'BOTTOM';
-    if (y < overRect.height * 0.25) dir = 'TOP';
-    else if (y > overRect.height * 0.75) dir = 'BOTTOM';
-    else if (x < overRect.width * 0.25) dir = 'LEFT';
-    else if (x > overRect.width * 0.75) dir = 'RIGHT';
-
-    setIndicator({ id: over.id, direction: dir });
-  };
-
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-    setActiveId(null);
-    setIndicator(null);
-    if (!over || active.id === over.id || !indicator) return;
-
-    setRootBlocks((prev) => {
-      const next = cloneTree(prev);
-      const activePath = findBlockPath(next, active.id);
-      if (!activePath) return prev;
-
-      // Extract the dragged block
-      const draggedBlock = removeBlockAtPath(next, activePath);
-      gc(next); // clean up empty containers
-
-      const overPath = findBlockPath(next, over.id);
-      if (!overPath) {
-        next.push(draggedBlock);
-        return next;
-      }
-
-      const overParentPath = overPath.slice(0, -1);
-      const overIndex = overPath[overPath.length - 1];
-      let overParent = getBlockAtPath(next, overParentPath) || { children: next };
-
-      if (indicator.direction === 'TOP' || indicator.direction === 'BOTTOM') {
-        const insertIndex = indicator.direction === 'TOP' ? overIndex : overIndex + 1;
-        overParent.children.splice(insertIndex, 0, draggedBlock);
-      } else {
-        // FORM_COLUMN
-        if (overParent.type === 'column') {
-          // It's inside a column, so we add a new column to the parent column_list
-          const colListPath = overParentPath.slice(0, -1);
-          const colIndex = overParentPath[overParentPath.length - 1];
-          const colList = getBlockAtPath(next, colListPath) || { children: next };
-          const newCol = { id: `col-${generateId()}`, type: 'column', width: 50, children: [draggedBlock] };
-          const insertIndex = indicator.direction === 'LEFT' ? colIndex : colIndex + 1;
-          colList.children.splice(insertIndex, 0, newCol);
-          // Adjust sibling widths
-          colList.children.forEach(c => c.width = 100 / colList.children.length);
-        } else {
-          // Replace the widget with a new column_list
-          const overBlock = removeBlockAtPath(next, overPath);
-          const newColList = {
-            id: `row-${generateId()}`,
-            type: 'column_list',
-            children: [
-              { id: `col-${generateId()}`, type: 'column', width: 50, children: indicator.direction === 'LEFT' ? [draggedBlock] : [overBlock] },
-              { id: `col-${generateId()}`, type: 'column', width: 50, children: indicator.direction === 'LEFT' ? [overBlock] : [draggedBlock] }
-            ]
-          };
-          overParent.children.splice(overIndex, 0, newColList);
-        }
-      }
-      gc(next);
-      return next;
-    });
-  };
-
-  const setColumnWidths = (colListId, newWidths) => {
-    setRootBlocks(prev => {
-      const next = cloneTree(prev);
-      const listPath = findBlockPath(next, colListId);
-      if (listPath) {
-        const list = getBlockAtPath(next, listPath);
-        list.children.forEach((col, i) => col.width = newWidths[i]);
-      }
-      return next;
-    });
-  };
-
-  const renderContent = (content) => {
-    switch(content) {
-      case 'health': return (
-        <div className="glass-panel flex flex-col h-full overflow-hidden">
-          <div className="flex justify-between items-center p-6 pb-2">
-            <h2 className="text-lg font-semibold text-[var(--color-text-muted)] tracking-wide">Health Telemetry</h2>
-            <span className="text-xs px-2 py-1 bg-[var(--color-bg-panel)] rounded-md">7 Days</span>
-          </div>
-          <div className="flex-1 flex flex-col items-center justify-center p-6 pt-2 h-full">
-             <div className="w-full h-full border border-dashed border-[var(--color-glass-border)] rounded-xl flex items-end justify-between gap-2 opacity-70 p-4">
-              {[40, 60, 45, 80, 55, 90, 75].map((h, i) => (
-                <div key={i} className="w-full bg-[var(--color-accent)]/40 rounded-t-sm hover:bg-[var(--color-accent)] transition-all cursor-pointer" style={{ height: `${h}%` }}></div>
-              ))}
+          {/* Hero Image Block */}
+          <div className="bg-[var(--color-bg-panel)] rounded-2xl border border-[var(--color-border)] p-4 shadow-sm flex flex-col items-center group relative">
+            <div className="absolute top-2 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Link href="/settings" className="text-[10px] bg-[var(--color-bg-dark)] px-2 py-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] border border-[var(--color-border)]">Edit</Link>
+            </div>
+            <div className="w-full aspect-square rounded-xl bg-[var(--color-bg-dark)] border-2 border-[var(--color-border)] flex items-center justify-center relative overflow-hidden group-hover:border-[var(--color-accent)]/50 transition-colors">
+              {data.manifesto.avatarUrl ? (
+                <img src={data.manifesto.avatarUrl} alt="Avatar" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              ) : (
+                <span className="text-7xl filter drop-shadow-md group-hover:scale-110 transition-transform duration-500">🛡️</span>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-tr from-[var(--color-accent)]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            </div>
+            <div className="w-full text-center mt-4 text-[10px] text-[var(--color-text-muted)] uppercase tracking-widest font-bold">
+              Hero Avatar
             </div>
           </div>
-        </div>
-      );
-      case 'ai': return (
-        <div className="glass-panel flex flex-col h-full overflow-hidden">
-          <div className="flex justify-between items-center p-6 pb-2">
-             <h2 className="text-lg font-semibold text-[var(--color-text-muted)] tracking-wide">AI Synthesis Engine</h2>
-          </div>
-          <div className="flex-1 p-6 pt-2 h-full">
-            <div className="h-full bg-[rgba(255,51,102,0.05)] border border-[var(--color-accent-glow)] rounded-xl p-6 flex flex-col justify-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-accent)]/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2"></div>
-              <p className="text-[var(--color-text-main)] text-[15px] leading-relaxed relative z-10 custom-scrollbar overflow-y-auto">
-                <span className="text-[var(--color-accent)] font-bold mr-2 text-lg block mb-1">✦ Oracle Insight:</span> 
-                Your deep sleep has averaged 1h 45m this week, correlating with a 20% increase in deep work sessions. Keep maintaining your 10:30 PM wind-down routine to maximize tomorrow's writing output.
-              </p>
-            </div>
-          </div>
-        </div>
-      );
-      case 'tasks': return (
-        <div className="glass-panel flex flex-col h-full overflow-hidden">
-          <div className="flex justify-between items-center p-6 pb-4 border-b border-[var(--color-glass-border)]">
-            <h2 className="text-lg font-semibold text-[var(--color-text-muted)] tracking-wide">Action Pipeline</h2>
-            <span className="text-xs text-[var(--color-accent)] bg-[var(--color-accent)]/10 px-2 py-1 rounded-md">3 Active</span>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-            <ul className="flex flex-col gap-3">
-              <li className="flex items-start gap-3 p-3 hover:bg-[var(--color-glass-bg)] rounded-lg cursor-pointer transition-colors">
-                <div className="w-5 h-5 rounded border-2 border-[var(--color-accent)] mt-0.5 shrink-0"></div>
-                <div className="text-sm text-[var(--color-text-main)] font-medium">Finish Thesis Chapter 3</div>
-              </li>
-              <li className="flex items-start gap-3 p-3 hover:bg-[var(--color-glass-bg)] rounded-lg cursor-pointer transition-colors">
-                <div className="w-5 h-5 rounded border-2 border-[var(--color-glass-border)] mt-0.5 shrink-0"></div>
-                <div className="text-sm text-[var(--color-text-main)] font-medium">Review Q3 Budget</div>
-              </li>
-            </ul>
-          </div>
-        </div>
-      );
-      case 'calendar': return (
-        <div className="glass-panel flex flex-col h-full overflow-hidden">
-           <div className="flex justify-between items-center p-6 pb-4 border-b border-[var(--color-glass-border)]">
-            <h2 className="text-lg font-semibold text-[var(--color-text-muted)] tracking-wide">Daily Schedule</h2>
-          </div>
-           <div className="flex flex-col gap-4 flex-1 overflow-y-auto p-4 custom-scrollbar">
-             <div className="flex gap-4 text-sm relative">
-               <span className="text-[var(--color-text-muted)] w-10 text-right pt-2 font-mono text-xs">09:00</span>
-               <div className="flex-1 bg-[var(--color-bg-panel)] rounded-lg p-3 border-l-4 border-blue-400">Deep Work</div>
-             </div>
-             <div className="flex items-center gap-2 -my-2 relative z-10">
-               <span className="text-[var(--color-accent)] w-10 text-right text-[10px] font-bold font-mono">11:30</span>
-               <div className="h-px bg-[var(--color-accent)] flex-1 relative"><div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--color-accent)] shadow-[0_0_8px_var(--color-accent-glow)]"></div></div>
-             </div>
-             <div className="flex gap-4 text-sm">
-               <span className="text-[var(--color-text-muted)] w-10 text-right pt-2 font-mono text-xs">13:00</span>
-               <div className="flex-1 bg-[var(--color-bg-panel)] rounded-lg p-3 border-l-4 border-purple-400">Lunch</div>
-             </div>
-           </div>
-        </div>
-      );
-      case 'metrics': return (
-        <div className="flex flex-col gap-6 h-full overflow-hidden">
-          <div className="glass-panel flex-1 flex flex-col justify-center items-center text-center">
-            <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wider mb-2">Net Worth</div>
-            <div className="text-2xl font-bold text-green-400">$142,500</div>
-          </div>
-          <div className="glass-panel flex-1 flex flex-col justify-center items-center text-center">
-            <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wider mb-2">CRM Action</div>
-            <div className="text-2xl font-bold text-[var(--color-accent)]">3 Overdue</div>
-          </div>
-        </div>
-      );
-      case 'journal': return (
-        <div className="glass-panel h-full flex items-center justify-center gap-4 bg-[var(--color-accent)]/10 border-[var(--color-accent)]/30 hover:bg-[var(--color-accent)]/20 cursor-pointer transition-all p-6 group/btn">
-          <span className="text-2xl group-hover/btn:scale-110 transition-transform">✍️</span>
-          <span className="font-semibold text-[var(--color-text-main)] tracking-wide">Quick Journal Entry</span>
-        </div>
-      );
-      default: return null;
-    }
-  };
 
-  const renderBlock = (block, depth = 0) => {
-    if (block.type === 'column_list') {
-      return (
-        <div key={block.id} className="flex flex-row w-full gap-6">
-          {block.children.map((col, idx) => (
-            <div key={col.id} className="relative flex flex-col gap-6 min-w-0" style={{ flex: `${col.width} 1 0%` }}>
-              {col.children?.map(child => renderBlock(child, depth + 1))}
-              {/* Column Resize Handle */}
-              {idx < block.children.length - 1 && (
-                <div 
-                  className="absolute top-0 right-[-14px] w-4 h-full cursor-col-resize opacity-0 hover:opacity-100 z-30 flex items-center justify-center group/colres"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    const startX = e.clientX;
-                    const containerWidth = e.target.closest('.flex-row').offsetWidth;
-                    const startLeftW = block.children[idx].width;
-                    const startRightW = block.children[idx+1].width;
-                    
-                    const onMove = (me) => {
-                      const delta = ((me.clientX - startX) / containerWidth) * 100;
-                      // Update DOM instantly for silky smooth resize
-                      e.target.parentElement.style.flex = `${Math.max(10, startLeftW + delta)} 1 0%`;
-                      e.target.parentElement.nextElementSibling.style.flex = `${Math.max(10, startRightW - delta)} 1 0%`;
-                    };
-                    const onUp = (ue) => {
-                      const delta = ((ue.clientX - startX) / containerWidth) * 100;
-                      const newWidths = block.children.map(c => c.width);
-                      newWidths[idx] = Math.max(10, startLeftW + delta);
-                      newWidths[idx+1] = Math.max(10, startRightW - delta);
-                      setColumnWidths(block.id, newWidths);
-                      document.removeEventListener('pointermove', onMove);
-                      document.removeEventListener('pointerup', onUp);
-                    };
-                    document.addEventListener('pointermove', onMove);
-                    document.addEventListener('pointerup', onUp);
-                  }}
-                >
-                  <div className="w-1.5 h-16 bg-[var(--color-glass-border)] rounded-full group-hover/colres:bg-[var(--color-accent)] transition-colors shadow-[0_0_10px_var(--color-bg-dark)] border border-[var(--color-glass-border)]"></div>
+          {/* Stats Box (Level, Buffs, Life Progress, Wealth, CRM) */}
+          <div className="bg-[var(--color-bg-panel)] rounded-2xl border border-[var(--color-border)] p-5 shadow-sm space-y-6">
+            {/* Level & EXP */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-end">
+                <span className="font-black text-xl text-[var(--color-text-main)] font-mono tracking-tight">LV {level}</span>
+                <span className="text-sm font-bold font-mono text-[var(--color-accent)]">{confPercent}%</span>
+              </div>
+              <div className="h-2.5 bg-[var(--color-bg-dark)] rounded-full overflow-hidden border border-[var(--color-border)]">
+                <div
+                  className="h-full bg-[var(--color-accent)] transition-all duration-1000 ease-out"
+                  style={{ width: `${Math.max(0, Math.min(100, confPercent))}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Active Buffs / Debuffs */}
+            <div className="space-y-2 pt-3 border-t border-[var(--color-border)]/50">
+              <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Active Buffs / Debuffs</span>
+              <div className="flex flex-wrap gap-2">
+                {data.activeEffects?.length > 0 ? data.activeEffects.map(h => (
+                   <span key={h.id} className={`text-xs px-2 py-1 rounded border ${h.isPositive ? 'bg-green-900/20 text-green-400 border-green-900/30' : 'bg-red-900/20 text-red-400 border-red-900/30'}`}>
+                     {h.title}
+                   </span>
+                )) : (
+                   <span className="text-xs text-[var(--color-text-muted)] italic">No active buffs/debuffs</span>
+                )}
+              </div>
+            </div>
+
+            {/* Life Progress Bar */}
+            <div className="space-y-3 pt-3 border-t border-[var(--color-border)]/50">
+              <div className="flex justify-between items-end mb-1">
+                <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Life Progress</span>
+                <span className="text-[10px] text-[var(--color-text-main)] font-mono opacity-80">{progressData?.ageText}</span>
+              </div>
+              {progressData && (
+                <div className="space-y-2.5">
+                  <ProgressBar label="Day" value={progressData.day} colorClass="bg-blue-400/80" />
+                  <ProgressBar label="Month" value={progressData.month} colorClass="bg-indigo-400/80" />
+                  <ProgressBar label="Year" value={progressData.year} colorClass="bg-purple-400/80" />
+                  <ProgressBar label="Life" value={progressData.life} colorClass="bg-pink-400/80" />
                 </div>
               )}
             </div>
-          ))}
-        </div>
-      );
-    }
-    
-    if (block.type === 'widget') {
-      return (
-        <WidgetWrapper key={block.id} id={block.id} height={block.height} indicator={indicator} activeId={activeId} onResize={handleResize}>
-          {renderContent(block.content)}
-        </WidgetWrapper>
-      );
-    }
-  };
 
-  // Find dragged content for preview
-  let activeContent = null;
-  if (activeId) {
-    const p = findBlockPath(rootBlocks, activeId);
-    if (p) activeContent = getBlockAtPath(rootBlocks, p);
-  }
-
-  return (
-    <div className="w-full max-w-[1600px] mx-auto animate-in fade-in duration-500 pb-20">
-      <div className="flex items-center justify-between mb-8 px-2">
-        <h1 className="text-3xl font-bold text-[var(--color-text-main)] tracking-wide">Dashboard</h1>
-        <div className="text-[var(--color-text-muted)] text-sm">Friday, September 11, 2026</div>
-      </div>
-      
-      <DndContext id="dashboard-dnd" sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-        <div className="flex flex-col gap-6 w-full items-start">
-          {rootBlocks.map(block => renderBlock(block))}
-        </div>
-
-        <DragOverlay dropAnimation={null}>
-          {activeContent ? (
-            <div style={{ height: activeContent.height }} className="opacity-90 scale-105 pointer-events-none shadow-[0_30px_60px_rgba(0,0,0,0.6)] rounded-2xl w-[400px]">
-              {renderContent(activeContent.content)}
+            {/* Wealth & CRM Stats */}
+            <div className="pt-3 border-t border-[var(--color-border)]/50 space-y-2 text-xs font-mono text-[var(--color-text-muted)]">
+              <div className="flex justify-between">
+                <span>🪙 Net Worth</span>
+                <span className="text-[var(--color-text-main)] font-bold">$ {stats.netWorth.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>🤝 Network</span>
+                <span className="text-[var(--color-text-main)] font-bold">{stats.networkCount} Contacts</span>
+              </div>
             </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          </div>
+
+          {/* Combat Log */}
+          <div className="bg-[var(--color-bg-panel)] rounded-2xl border border-[var(--color-border)] p-5 shadow-sm flex flex-col flex-1 min-h-[250px]">
+            <h3 className="text-[10px] font-black tracking-widest text-[var(--color-text-muted)] uppercase mb-4 flex items-center gap-2">
+              <span className="text-sm">⚔️</span> Combat Log
+            </h3>
+            <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-3">
+              {data.recentVotes?.length > 0 ? data.recentVotes.map((vote) => (
+                <div key={vote.id} className="text-xs font-mono pb-2 border-b border-[var(--color-border)]/50 last:border-0 flex items-start gap-2">
+                  <span className={`flex-shrink-0 font-bold ${vote.logOddsValue > 0 ? "text-green-400" : "text-red-400"}`}>
+                    [{vote.logOddsValue > 0 ? '+' : ''}{vote.logOddsValue}]
+                  </span>
+                  <span className="text-[var(--color-text-main)] opacity-90 leading-tight">{vote.description}</span>
+                </div>
+              )) : (
+                <div className="text-xs text-[var(--color-text-muted)] italic">No actions recorded.</div>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* RIGHT AREA: Lore & Quests */}
+        <div className="flex-1 flex flex-col lg:flex-row gap-6 items-stretch">
+
+          {/* THE LORE (Center) */}
+          <div className="flex-1 bg-[var(--color-bg-panel)] rounded-2xl border border-[var(--color-border)] p-6 md:p-8 shadow-sm flex flex-col gap-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-accent)] opacity-[0.03] rounded-full blur-3xl pointer-events-none"></div>
+
+            <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]/60">
+              <h3 className="text-xs font-black tracking-widest text-[var(--color-text-muted)] uppercase flex items-center gap-2">
+                <span className="text-base">📖</span> The Lore
+              </h3>
+            </div>
+
+            <div className="space-y-8 flex-1">
+              <div>
+                <h4 className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase mb-3 tracking-widest">▫️ The Creed (Core)</h4>
+                <p className="text-sm md:text-base text-[var(--color-text-main)] italic font-serif leading-relaxed border-l-2 border-[var(--color-accent)]/50 pl-4 py-1">
+                  "{data.manifesto.statement}"
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-[10px] font-bold text-red-400/80 uppercase mb-3 tracking-widest">▫️ The Abyss (Anti-Vision)</h4>
+                <p className="text-sm text-[var(--color-text-muted)] leading-relaxed whitespace-pre-wrap border-l-2 border-red-500/20 pl-4 py-1 hover:text-[var(--color-text-main)] transition-colors">
+                  {data.manifesto.antiVision}
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-[10px] font-bold text-blue-400/80 uppercase mb-3 tracking-widest">▫️ Ideal Realm (MVP Vision)</h4>
+                <p className="text-sm text-[var(--color-text-muted)] leading-relaxed whitespace-pre-wrap border-l-2 border-blue-500/20 pl-4 py-1 hover:text-[var(--color-text-main)] transition-colors">
+                  {data.manifesto.mvpVision}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ACTIVE QUESTS (Right) */}
+          <div className="flex-1 bg-[var(--color-bg-panel)] rounded-2xl border border-[var(--color-border)] p-6 md:p-8 shadow-sm flex flex-col">
+            <div className="flex justify-between items-center mb-6 pb-3 border-b border-[var(--color-border)]/60">
+              <h3 className="text-xs font-black tracking-widest text-[var(--color-text-muted)] uppercase flex items-center gap-2">
+                <span className="text-base">📜</span> Active Quests
+              </h3>
+              <Link href="/actions" className="text-[10px] uppercase font-bold text-[var(--color-accent)] hover:underline bg-[var(--color-accent)]/10 px-2 py-1 rounded">Action Engine</Link>
+            </div>
+
+            <div className="flex-1 space-y-8 overflow-y-auto pr-1 custom-scrollbar">
+              {/* Main Quest (Year) */}
+              <div>
+                <h4 className="text-[10px] font-bold text-amber-500/80 mb-3 flex items-center gap-2 uppercase tracking-widest">
+                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
+                  Main Quests (Annual)
+                </h4>
+                <div className="space-y-3">
+                  {quests?.yearMissions?.length > 0 ? quests.yearMissions.map(m => (
+                    <div key={m.id} className="bg-[var(--color-bg-dark)] border border-amber-500/20 rounded-xl p-3 text-sm flex justify-between items-center group">
+                      <span className="font-medium text-[var(--color-text-main)] truncate mr-2">{m.title}</span>
+                      <span className="text-[10px] font-mono text-amber-500 bg-amber-500/10 px-2 py-1 rounded flex-shrink-0">
+                        {m.completedSubprojects}/{m.totalSubprojects}
+                      </span>
+                    </div>
+                  )) : <div className="text-xs text-[var(--color-text-muted)] italic pl-3">No active main quests.</div>}
+                </div>
+              </div>
+
+              {/* Side Quests (Month) */}
+              <div>
+                <h4 className="text-[10px] font-bold text-blue-400/80 mb-3 flex items-center gap-2 uppercase tracking-widest">
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                  Side Quests (Monthly)
+                </h4>
+                <div className="space-y-3">
+                  {quests?.monthBosses?.length > 0 ? quests.monthBosses.map(m => (
+                    <div key={m.id} className="bg-[var(--color-bg-dark)] border border-blue-500/20 rounded-xl p-3 text-sm flex justify-between items-center">
+                      <span className="font-medium text-[var(--color-text-main)] truncate mr-2">{m.title}</span>
+                      <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2 py-1 rounded flex-shrink-0">
+                        {m.completedTasks}/{m.totalTasks}
+                      </span>
+                    </div>
+                  )) : <div className="text-xs text-[var(--color-text-muted)] italic pl-3">No active side quests.</div>}
+                </div>
+              </div>
+
+              {/* Dailies */}
+              <div>
+                <h4 className="text-[10px] font-bold text-green-400/80 mb-3 flex items-center gap-2 uppercase tracking-widest">
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                  Dailies (Priority 1)
+                </h4>
+                <div className="space-y-3">
+                  {quests?.dailyLevers?.length > 0 ? quests.dailyLevers.map(t => (
+                    <div key={t.id} className="bg-[#0a1f10]/30 border border-green-900/30 rounded-xl p-3 text-sm flex items-center gap-3">
+                      <div className="w-3.5 h-3.5 rounded-sm border-2 border-green-500/40 flex-shrink-0"></div>
+                      <span className="font-medium text-green-100">{t.title}</span>
+                    </div>
+                  )) : <div className="text-xs text-[var(--color-text-muted)] italic pl-3">Dailies completed.</div>}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: var(--color-border);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: var(--color-text-muted);
+        }
+      `}} />
     </div>
   );
 }

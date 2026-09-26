@@ -174,10 +174,10 @@ export default function TaskDetailModal({
               }}
               className="bg-transparent border-none focus:outline-none cursor-pointer text-[var(--color-text-main)] text-[13px]"
             >
-              <option>None</option>
-              <option>Low</option>
-              <option>Medium</option>
-              <option>High</option>
+              <option value="None">Priority 4</option>
+              <option value="Low">Priority 3</option>
+              <option value="Medium">Priority 2</option>
+              <option value="High">Priority 1</option>
             </select>
           </div>
           
