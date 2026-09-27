@@ -27,6 +27,7 @@ export default function Sidebar({ defaultCollapsed = false }) {
     { icon: "🧘‍♂️", label: "Psychology", href: "/mood" },
     { icon: "🌍", label: "Environment", href: "/environment" },
     { icon: "🤖", label: "AI Oracle", href: "/oracle" },
+    { icon: "🗣️", label: "English Vault", href: "/english" },
     { icon: "🔧", label: "Settings", href: "/settings" },
   ];
 

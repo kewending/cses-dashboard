@@ -241,7 +241,7 @@ def process_walk(image_path):
             nums = re.findall(r'\d+', s)
             return int(nums[0]) if nums else None
 
-    summary_match = re.search(r'([A-Za-z0-9,]+)\s+([A-Za-z0-9,.]+)\s*Km\s+([A-Za-z0-9,]+)\s*Kcal', text, re.IGNORECASE)
+    summary_match = re.search(r'([A-Za-z0-9,]+)\s+([A-Za-z0-9,.]+)\s*k\s*m\s+([A-Za-z0-9,]+)\s*k\s*c\s*a\s*l', text, re.IGNORECASE)
     
     if summary_match:
         steps = sanitize_num(summary_match.group(1))

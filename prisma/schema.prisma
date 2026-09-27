@@ -461,3 +461,63 @@ model ActiveEffect {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ─── English Learning Module ──────────────────────────────────────────────────
+
+model VocabItem {
+  id               String           @id @default(cuid())
+  text             String
+  type             String           @default("word") // word | phrase
+  partOfSpeech     String?          // noun, verb, adj, etc.
+  audioUrl         String?          // URL to static mp3 (e.g., Google Dictionary)
+  meaning          String           // Primary translation/meaning
+  explanation      String?          // Detailed monolingual explanation
+  exampleSentences String?          // JSON array of example sentences
+  tags             String?          // JSON array: ["Rescue Phrase", "High-frequency"]
+  
+  progress         LearningProgress?
+
+  // Many-to-many with Scenarios
+  scenarios        Scenario[]       @relation("ScenarioVocab")
+
+  // Self-referencing relationships
+  relationsFrom    VocabRelation[]  @relation("RelationFrom")
+  relationsTo      VocabRelation[]  @relation("RelationTo")
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model VocabRelation {
+  id           String    @id @default(cuid())
+  fromId       String
+  toId         String
+  relationType String    // Synonym | Antonym | Root
+  
+  from         VocabItem @relation("RelationFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to           VocabItem @relation("RelationTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId, relationType])
+}
+
+model Scenario {
+  id             String      @id @default(cuid())
+  prompt         String      // e.g. "You want to notify your colleague to move the meeting..."
+  targetSentence String      // e.g. "Can we move the meeting to tomorrow?"
+  
+  vocabItems     VocabItem[] @relation("ScenarioVocab")
+
+  createdAt      DateTime    @default(now())
+}
+
+model LearningProgress {
+  id             String    @id @default(cuid())
+  vocabItemId    String    @unique
+  vocabItem      VocabItem @relation(fields: [vocabItemId], references: [id], onDelete: Cascade)
+  
+  masteryLevel   Int       @default(0) // 0 (New) -> 5 (Mastered)
+  interval       Int       @default(0) // Days until next review
+  nextReviewDate DateTime  @default(now())
+  
+  updatedAt      DateTime  @updatedAt
+}
