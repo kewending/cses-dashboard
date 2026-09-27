@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
+import { Mic, Square, Maximize2, Minimize2 } from "lucide-react";
 
 export default function AgentChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -7,11 +8,15 @@ export default function AgentChat() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentTool, setCurrentTool] = useState(null);
-  const [ttsEnabled, setTtsEnabled] = useState(true); // Optional toggle
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   
   const messagesEndRef = useRef(null);
   const audioQueueRef = useRef([]);
   const isPlayingRef = useRef(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   const playNextAudio = () => {
     if (audioQueueRef.current.length === 0) {
@@ -40,6 +45,58 @@ export default function AgentChat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, currentTool, isOpen]);
+
+  const handleMicClick = async (e) => {
+    e.preventDefault();
+    if (isRecording) {
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+        setIsRecording(false);
+      }
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        stream.getTracks().forEach(track => track.stop());
+        
+        if (audioBlob.size < 2000) return;
+        
+        setInput("Transcribing...");
+        try {
+          const formData = new FormData();
+          formData.append("file", audioBlob, "recording.webm");
+          const asrRes = await fetch("http://localhost:8000/api/asr", {
+            method: "POST",
+            body: formData
+          });
+          
+          if (!asrRes.ok) throw new Error("ASR Failed");
+          const { text } = await asrRes.json();
+          setInput(text);
+          // We let the user review it and click Send
+        } catch (error) {
+          console.error(error);
+          setInput("");
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Mic error:", err);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -144,10 +201,23 @@ export default function AgentChat() {
       </button>
 
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-96 h-[600px] max-h-[80vh] bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden">
+        <div 
+          className={`fixed bg-[var(--color-bg-panel)] border border-[var(--color-border)] flex flex-col z-[100] shadow-2xl transition-all duration-300 ${
+            isFullScreen 
+              ? "inset-0 w-full h-full rounded-none" 
+              : "bottom-24 right-6 w-96 h-[600px] max-h-[80vh] rounded-2xl overflow-hidden"
+          }`}
+        >
           <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-bg-dark)]">
             <h3 className="font-bold text-[var(--color-text-main)]">CSES Agent</h3>
             <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setIsFullScreen(!isFullScreen)}
+                className="text-[var(--color-text-muted)] hover:text-blue-500 cursor-pointer flex items-center justify-center"
+                title={isFullScreen ? "Minimize" : "Full Screen"}
+              >
+                {isFullScreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+              </button>
               <button 
                 onClick={() => setTtsEnabled(!ttsEnabled)}
                 className={`text-[var(--color-text-muted)] hover:text-blue-500 cursor-pointer flex items-center justify-center ${ttsEnabled ? 'text-blue-500' : ''}`}
@@ -252,16 +322,28 @@ export default function AgentChat() {
           </div>
           
           <form onSubmit={handleSubmit} className="p-3 border-t border-[var(--color-border)] bg-[var(--color-bg-dark)] flex gap-2">
+            <button
+              type="button"
+              onClick={handleMicClick}
+              className={`p-2 rounded-lg flex items-center justify-center transition-colors ${
+                isRecording 
+                  ? 'bg-rose-500 text-white animate-pulse' 
+                  : 'bg-[var(--color-bg-panel)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-blue-500'
+              }`}
+            >
+              {isRecording ? <Square className="w-5 h-5 fill-current" /> : <Mic className="w-5 h-5" />}
+            </button>
             <input 
               type="text" 
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask anything..."
-              className="flex-1 bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-blue-500"
+              placeholder={isRecording ? "Listening..." : "Ask anything..."}
+              disabled={isRecording}
+              className="flex-1 bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-blue-500 disabled:opacity-50"
             />
             <button 
               type="submit" 
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || !input.trim() || isRecording || input === "Transcribing..."}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 cursor-pointer hover:bg-blue-700"
             >
               Send

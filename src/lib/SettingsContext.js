@@ -21,6 +21,10 @@ const defaultSettings = {
   },
   diary: {
     shutdownTemplate: '<p><strong>Q1: 今天哪项决策最符合目标身份？</strong></p><p><br></p><p><strong>Q2: 明天要消除哪个阻力？</strong></p><p><br></p>'
+  },
+  english: {
+    pauseAfterWord: 1000,
+    pauseAfterSentence: 2000,
   }
 };
 

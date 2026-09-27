@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import EnglishDashboard from "./EnglishDashboard";
-import { Zap } from "lucide-react";
+import { Zap, Mic, Swords, Headphones } from "lucide-react";
 
 export const metadata = {
   title: "English Vault | CSES Dashboard",
@@ -83,6 +83,27 @@ export default async function EnglishPage() {
               >
                 <Zap className="w-4 h-4 fill-current" />
                 ENTER ARENA
+              </Link>
+              <Link 
+                href="/english/parent-room"
+                className="flex items-center gap-2 px-6 py-3 ml-4 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] hover:shadow-[0_0_25px_rgba(225,29,72,0.5)]"
+              >
+                <Mic className="w-4 h-4" />
+                AI PARENT
+              </Link>
+              <Link 
+                href="/english/drills"
+                className="flex items-center gap-2 px-6 py-3 ml-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(217,119,6,0.3)] hover:shadow-[0_0_25px_rgba(217,119,6,0.5)]"
+              >
+                <Swords className="w-4 h-4" />
+                PATTERN DRILLS
+              </Link>
+              <Link 
+                href="/english/soaking"
+                className="flex items-center gap-2 px-6 py-3 ml-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)] hover:shadow-[0_0_25px_rgba(79,70,229,0.5)]"
+              >
+                <Headphones className="w-4 h-4" />
+                BRAIN SOAKING
               </Link>
             </div>
           </div>

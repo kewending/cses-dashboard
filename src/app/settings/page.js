@@ -68,6 +68,7 @@ export default function SettingsPage() {
     { id: 'crm', label: '👥 CRM (Relationships)' },
     { id: 'tasks', label: '⏱️ Tasks & Timeline' },
     { id: 'diary', label: '📔 Diary & Identity' },
+    { id: 'english', label: '🇬🇧 English Vault' },
   ];
 
   const handleCrmTierChange = (index, field, value) => {
@@ -102,6 +103,10 @@ export default function SettingsPage() {
 
   const handleDiaryChange = (field, value) => {
     updateSettings('diary', { ...settings.diary, [field]: value });
+  };
+
+  const handleEnglishChange = (field, value) => {
+    updateSettings('english', { ...settings.english, [field]: parseInt(value) || 0 });
   };
 
   return (
@@ -408,6 +413,40 @@ export default function SettingsPage() {
                 ) : (
                   <div className="text-xs text-[var(--color-text-muted)] animate-pulse">Loading...</div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'english' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <h2 className="text-xl font-bold border-b border-[var(--color-border)] pb-4">English Vault</h2>
+              
+              <div className="space-y-6">
+                <h3 className="text-lg font-bold">Brain Soaking Playlist</h3>
+                
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-[var(--color-text-muted)]">Pause After Word (ms)</label>
+                    <input 
+                      type="number" 
+                      value={settings.english?.pauseAfterWord || 1000}
+                      onChange={(e) => handleEnglishChange('pauseAfterWord', e.target.value)}
+                      className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-lg font-mono outline-none focus:border-[var(--color-accent)] transition-colors text-center"
+                      min="0" max="5000" step="100"
+                    />
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-[var(--color-text-muted)]">Pause After Sentence (ms)</label>
+                    <input 
+                      type="number" 
+                      value={settings.english?.pauseAfterSentence || 2000}
+                      onChange={(e) => handleEnglishChange('pauseAfterSentence', e.target.value)}
+                      className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-lg font-mono outline-none focus:border-[var(--color-accent)] transition-colors text-center"
+                      min="0" max="10000" step="100"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
