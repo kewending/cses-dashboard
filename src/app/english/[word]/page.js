@@ -110,10 +110,21 @@ export default async function WordDetailPage({ params }) {
                   )}
 
                   {/* Individual Mastery */}
-                  <span className="text-xs text-neutral-600 flex items-center gap-1 ml-auto">
-                    <Bookmark className="w-3 h-3" />
-                    Mastery Lvl {sense.progress?.masteryLevel || 0}
-                  </span>
+                  <div className="flex items-center gap-2 ml-auto" title={`Mastery: ${sense.progress?.masteryLevel || 0}/5`}>
+                    <Bookmark className="w-3 h-3 text-neutral-600" />
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((level) => (
+                        <div
+                          key={level}
+                          className={`h-1 w-3 rounded-full ${
+                            level <= (sense.progress?.masteryLevel || 0)
+                              ? "bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                              : "bg-white/10"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Explanation */}

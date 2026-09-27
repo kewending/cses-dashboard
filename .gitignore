@@ -48,6 +48,7 @@ dev.db
 
 # Upload
 /public/uploads/
+/public/scenarios/
 
 # Health Module Data & Credentials
 /scripts/credentials.json

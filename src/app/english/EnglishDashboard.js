@@ -34,6 +34,11 @@ export default function EnglishDashboard({ initialWords }) {
     audio.play().catch(err => console.error("Audio play failed:", err));
   };
 
+  // Dynamic filter: instantly filter words based on input, and limit to 30 to prevent DOM lag
+  const displayWords = words
+    .filter(w => w.text.toLowerCase().includes(inputValue.trim().toLowerCase()))
+    .slice(0, 30);
+
   return (
     <div className="space-y-10">
       
@@ -48,23 +53,23 @@ export default function EnglishDashboard({ initialWords }) {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Type a word to magic import (e.g., resplendent)..."
+            placeholder="Search arsenal or type a new word to Magic Import..."
             className="w-full bg-transparent border-none py-4 px-4 text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-0"
             disabled={importing}
           />
           <button
             type="submit"
             disabled={importing || !inputValue.trim()}
-            className="pr-5 font-semibold text-sm text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="pr-5 font-semibold text-sm text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
           >
-            IMPORT
+            IMPORT NOW
           </button>
         </div>
       </form>
 
       {/* Vocabulary Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {words.map((w) => (
+        {displayWords.map((w) => (
           <div
             key={w.text}
             onClick={() => router.push(`/english/${encodeURIComponent(w.text)}`)}
@@ -117,7 +122,14 @@ export default function EnglishDashboard({ initialWords }) {
           </div>
         ))}
 
-        {words.length === 0 && (
+        {displayWords.length === 0 && inputValue.trim().length > 0 && (
+          <div className="col-span-full py-20 text-center text-neutral-500">
+            <Search className="w-12 h-12 mx-auto mb-4 opacity-20" />
+            <p>No words found. Press Enter to Magic Import "{inputValue}".</p>
+          </div>
+        )}
+
+        {words.length === 0 && inputValue.trim().length === 0 && (
           <div className="col-span-full py-20 text-center text-neutral-500">
             <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-20" />
             <p>Your arsenal is empty. Import a word to begin.</p>

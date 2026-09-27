@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
+import Link from "next/link";
 import EnglishDashboard from "./EnglishDashboard";
+import { Zap } from "lucide-react";
 
 export const metadata = {
   title: "English Vault | CSES Dashboard",
@@ -73,6 +75,15 @@ export default async function EnglishPage() {
                 {groupedWords.filter(w => w.lowestMastery >= 4).length}
               </span>
               <span className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Mastered</span>
+            </div>
+            <div className="flex items-center ml-4">
+              <Link 
+                href="/english/training"
+                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)] hover:shadow-[0_0_25px_rgba(79,70,229,0.5)]"
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                ENTER ARENA
+              </Link>
             </div>
           </div>
         </header>

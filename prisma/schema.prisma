@@ -501,13 +501,15 @@ model VocabRelation {
 }
 
 model Scenario {
-  id             String      @id @default(cuid())
-  prompt         String      // e.g. "You want to notify your colleague to move the meeting..."
-  targetSentence String      // e.g. "Can we move the meeting to tomorrow?"
+  id               String      @id @default(cuid())
+  setting          String      // e.g. Cyberpunk Alleyway
+  sentence         String      // High pressure sentence
+  audioUrl         String?     // TTS audio file path
+  pressureLevel    String      // LOW | MEDIUM | HIGH
+  expectedResponse String      // The target word to fill in
   
-  vocabItems     VocabItem[] @relation("ScenarioVocab")
-
-  createdAt      DateTime    @default(now())
+  vocabItems       VocabItem[] @relation("ScenarioVocab")
+  createdAt        DateTime    @default(now())
 }
 
 model LearningProgress {
