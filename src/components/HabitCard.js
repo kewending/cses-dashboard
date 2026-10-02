@@ -1,5 +1,6 @@
 export default function HabitCard({ habit, onEdit, onLog }) {
-  const today = new Date().toISOString().split('T')[0];
+  const d = new Date();
+  const today = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
   const todayLog = habit.logs?.find(l => l.date === today);
   const posCount = todayLog?.countPositive || 0;
   const negCount = todayLog?.countNegative || 0;

@@ -24,6 +24,7 @@ import { castVote } from './identityActions';
 
 import DateSelectorDropdown from '@/components/DateSelectorDropdown';
 import FilterDropdown from '@/components/FilterDropdown';
+import ProjectFilterDropdown from '@/components/ProjectFilterDropdown';
 import SortableTask from '@/components/SortableTask';
 import DraggableSession from '@/components/DraggableSession';
 import CurrentTimeLine from '@/components/CurrentTimeLine';
@@ -70,6 +71,7 @@ export default function ActionEngine() {
   const [calendarZoom, setCalendarZoom] = useState(80);
   const calendarScrollRef = useRef(0);
   const [objectiveFilter, setObjectiveFilter] = useState('all');
+  const [parentProjectFilter, setParentProjectFilter] = useState('all');
 
   const [viewMode, setViewMode] = useState('daily');
   const [activeId, setActiveId] = useState(null);
@@ -418,6 +420,22 @@ export default function ActionEngine() {
   const allTags = [...new Set(tasks.map(t => t.tag).filter(Boolean))];
   const filteredTasks = tasks.filter(t => (taskFilter === 'all' || t.tag === taskFilter) && t.showInKanban !== false);
 
+  const filteredProjects = projects.filter(p => {
+    if (objectiveFilter !== 'all') {
+      if (objectiveFilter === 'unassigned') {
+        if (p.objectiveId) return false;
+      } else if (p.objectiveId !== objectiveFilter) {
+        return false;
+      }
+    }
+    if (parentProjectFilter !== 'all') {
+      const isParent = p.id === parentProjectFilter;
+      const isChild = p.parentProjectId === parentProjectFilter;
+      if (!isParent && !isChild) return false;
+    }
+    return true;
+  });
+
   return (
     <div className="absolute inset-0 flex flex-col p-8 pt-6 overflow-hidden bg-[var(--color-bg-dark)]">
 
@@ -429,38 +447,14 @@ export default function ActionEngine() {
           )}
 
           {viewMode === 'projects' ? (
-            <div className="relative z-50 group">
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-dark)] text-[var(--color-text-main)] rounded border border-[var(--color-border)] hover:bg-[var(--color-bg-panel-hover)] text-sm font-semibold shadow-sm transition-colors">
-                <span className="text-[12px]">≡</span> Filter
-              </button>
-              <div className="absolute top-full mt-2 left-0 w-64 bg-[var(--color-bg-panel)] rounded-lg shadow-2xl border border-[var(--color-border)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 py-2">
-                <div className="px-4 pb-2 text-xs text-[var(--color-text-muted)] opacity-70 font-semibold border-b border-[var(--color-border)] mb-2 mt-1">
-                  Filter by objective:
-                </div>
-                <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                  <button onClick={() => setObjectiveFilter('all')} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel-hover)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <span className="text-green-500 text-lg">🎯</span> all
-                    </span>
-                    {objectiveFilter === 'all' && <span className="text-[var(--color-text-muted)] text-xs">✓</span>}
-                  </button>
-                  {objectives.map(obj => (
-                    <button key={obj.id} onClick={() => setObjectiveFilter(obj.id)} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel-hover)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
-                      <span className="flex items-center gap-2 pl-4">
-                        <span className="text-[#f2a950] text-lg">🎯</span> {obj.title}
-                      </span>
-                      {objectiveFilter === obj.id && <span className="text-[var(--color-text-muted)] text-xs">✓</span>}
-                    </button>
-                  ))}
-                  <button onClick={() => setObjectiveFilter('unassigned')} className="w-full text-left px-4 py-1.5 hover:bg-[var(--color-bg-panel-hover)] text-sm text-[var(--color-text-main)] flex items-center justify-between">
-                    <span className="flex items-center gap-2 pl-4">
-                      <span className="text-[var(--color-text-muted)] text-lg">📥</span> unassigned
-                    </span>
-                    {objectiveFilter === 'unassigned' && <span className="text-[var(--color-text-muted)] text-xs">✓</span>}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <ProjectFilterDropdown
+              parentProjectFilter={parentProjectFilter}
+              setParentProjectFilter={setParentProjectFilter}
+              objectiveFilter={objectiveFilter}
+              setObjectiveFilter={setObjectiveFilter}
+              allProjects={projects}
+              objectives={objectives}
+            />
           ) : viewMode === 'gantt' || viewMode === 'habits' ? null : (
             <FilterDropdown taskFilter={taskFilter} setTaskFilter={setTaskFilter} allTags={allTags} />
           )}
@@ -508,7 +502,7 @@ export default function ActionEngine() {
             <button onClick={() => setIdentityToast(null)} className="px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]">Skip</button>
             <button
               onClick={async () => {
-                await castVote({ logOddsValue: 0.5, description: `Completed High Priority Task: ${identityToast.title}`, taskId: identityToast.id });
+                await castVote({ logOddsValue: 0.5, description: `${identityToast.title}`, taskId: identityToast.id });
                 setIdentityToast(null);
               }}
               className="px-4 py-1.5 text-sm font-bold bg-[var(--color-accent)] text-white rounded-lg hover:brightness-110"
@@ -550,11 +544,7 @@ export default function ActionEngine() {
             />
           ) : viewMode === 'projects' ? (
             <ProjectsView
-              projects={projects.filter(p => {
-                if (objectiveFilter === 'all') return true;
-                if (objectiveFilter === 'unassigned') return !p.objectiveId;
-                return p.objectiveId === objectiveFilter;
-              })}
+              projects={filteredProjects}
               allProjects={projects}
               objectives={objectives}
               tasks={tasks}
@@ -569,6 +559,8 @@ export default function ActionEngine() {
               deleteObjective={deleteObjective}
               reorderProjects={reorderProjects}
               objectiveFilter={objectiveFilter}
+              parentProjectFilter={parentProjectFilter}
+              setParentProjectFilter={setParentProjectFilter}
               onAddTaskClick={setTaskCreatorConfig}
               onOpenTask={setDetailTaskId}
               toggleTaskComplete={toggleTaskComplete}

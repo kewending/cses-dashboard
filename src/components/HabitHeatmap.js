@@ -1,15 +1,12 @@
 import React from 'react';
 
 export default function HabitHeatmap({ habits }) {
-  // Generate last 30 dates (YYYY-MM-DD)
   const dates = [];
   for (let i = 29; i >= 0; i--) {
     const d = new Date();
-    // Offset to get correct local date string
-    const offset = d.getTimezoneOffset();
-    const local = new Date(d.getTime() - (offset * 60 * 1000));
-    local.setDate(local.getDate() - i);
-    dates.push(local.toISOString().split('T')[0]);
+    d.setDate(d.getDate() - i);
+    const dateStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+    dates.push(dateStr);
   }
 
   const getHeatmapColor = (habit, log) => {

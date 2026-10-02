@@ -39,6 +39,18 @@ function calculateLifeProgress(birthdayStr) {
   };
 }
 
+function getRelativeTime(timestamp) {
+  if (!timestamp) return '';
+  const diff = Date.now() - new Date(timestamp).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
 export default function HomeRPGPage() {
   const [data, setData] = useState(null);
   const [quests, setQuests] = useState(null);
@@ -220,11 +232,16 @@ export default function HomeRPGPage() {
             </h3>
             <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-3">
               {data.recentVotes?.length > 0 ? data.recentVotes.map((vote) => (
-                <div key={vote.id} className="text-xs font-mono pb-2 border-b border-[var(--color-border)]/50 last:border-0 flex items-start gap-2">
-                  <span className={`flex-shrink-0 font-bold ${vote.logOddsValue > 0 ? "text-green-400" : "text-red-400"}`}>
-                    [{vote.logOddsValue > 0 ? '+' : ''}{vote.logOddsValue}]
+                <div key={vote.id} className="text-xs font-mono pb-2 border-b border-[var(--color-border)]/50 last:border-0 flex items-start justify-between gap-2">
+                  <div className="flex gap-2">
+                    <span className={`flex-shrink-0 font-bold ${vote.logOddsValue > 0 ? "text-green-400" : "text-red-400"}`}>
+                      [{vote.logOddsValue > 0 ? '+' : ''}{vote.logOddsValue}]
+                    </span>
+                    <span className="text-[var(--color-text-main)] opacity-90 leading-tight">{vote.description}</span>
+                  </div>
+                  <span className="text-[10px] text-[var(--color-text-muted)] opacity-60 flex-shrink-0 whitespace-nowrap mt-0.5">
+                    {getRelativeTime(vote.timestamp)}
                   </span>
-                  <span className="text-[var(--color-text-main)] opacity-90 leading-tight">{vote.description}</span>
                 </div>
               )) : (
                 <div className="text-xs text-[var(--color-text-muted)] italic">No actions recorded.</div>

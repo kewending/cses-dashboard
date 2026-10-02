@@ -424,13 +424,57 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <h3 className="text-lg font-bold">Brain Soaking Playlist</h3>
                 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-[var(--color-text-muted)]">Pause Before Spelling (ms)</label>
+                    <input 
+                      type="number" 
+                      value={settings.english?.pauseBeforeSpelling ?? 500}
+                      onChange={(e) => handleEnglishChange('pauseBeforeSpelling', e.target.value)}
+                      className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-lg font-mono outline-none focus:border-[var(--color-accent)] transition-colors text-center"
+                      min="0" max="5000" step="100"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-[var(--color-text-muted)]">Pause Between Letters (ms)</label>
+                    <input 
+                      type="number" 
+                      value={settings.english?.pauseBetweenLetters ?? 300}
+                      onChange={(e) => handleEnglishChange('pauseBetweenLetters', e.target.value)}
+                      className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-lg font-mono outline-none focus:border-[var(--color-accent)] transition-colors text-center"
+                      min="0" max="2000" step="50"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-[var(--color-text-muted)]">Pause After Spelling (ms)</label>
+                    <input 
+                      type="number" 
+                      value={settings.english?.pauseAfterSpelling ?? 500}
+                      onChange={(e) => handleEnglishChange('pauseAfterSpelling', e.target.value)}
+                      className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-lg font-mono outline-none focus:border-[var(--color-accent)] transition-colors text-center"
+                      min="0" max="5000" step="100"
+                    />
+                  </div>
+
                   <div className="space-y-3">
                     <label className="text-sm font-semibold text-[var(--color-text-muted)]">Pause After Word (ms)</label>
                     <input 
                       type="number" 
-                      value={settings.english?.pauseAfterWord || 1000}
+                      value={settings.english?.pauseAfterWord ?? 1000}
                       onChange={(e) => handleEnglishChange('pauseAfterWord', e.target.value)}
+                      className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-lg font-mono outline-none focus:border-[var(--color-accent)] transition-colors text-center"
+                      min="0" max="5000" step="100"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-[var(--color-text-muted)]">Pause After Meaning (ms)</label>
+                    <input 
+                      type="number" 
+                      value={settings.english?.pauseAfterMeaning ?? 1000}
+                      onChange={(e) => handleEnglishChange('pauseAfterMeaning', e.target.value)}
                       className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-lg font-mono outline-none focus:border-[var(--color-accent)] transition-colors text-center"
                       min="0" max="5000" step="100"
                     />
@@ -440,10 +484,25 @@ export default function SettingsPage() {
                     <label className="text-sm font-semibold text-[var(--color-text-muted)]">Pause After Sentence (ms)</label>
                     <input 
                       type="number" 
-                      value={settings.english?.pauseAfterSentence || 2000}
+                      value={settings.english?.pauseAfterSentence ?? 2000}
                       onChange={(e) => handleEnglishChange('pauseAfterSentence', e.target.value)}
                       className="w-full bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-lg p-3 text-lg font-mono outline-none focus:border-[var(--color-accent)] transition-colors text-center"
                       min="0" max="10000" step="100"
+                    />
+                  </div>
+                  
+                  <div className="space-y-3 col-span-2 lg:col-span-3 mt-4">
+                    <div className="flex justify-between items-end mb-1">
+                      <label className="text-sm font-semibold text-[var(--color-text-muted)]">Words Per Session</label>
+                      <span className="text-xl font-mono text-[var(--color-accent)]">{settings.english?.soakingWordsCount || 50}</span>
+                    </div>
+                    <p className="text-xs text-[var(--color-text-muted)] mb-3">How many unmastered words to load into the Brain Soaking player at a time.</p>
+                    <input 
+                      type="range" 
+                      value={settings.english?.soakingWordsCount || 50}
+                      onChange={(e) => handleEnglishChange('soakingWordsCount', e.target.value)}
+                      className="w-full accent-[var(--color-accent)] cursor-pointer"
+                      min="10" max="200" step="5"
                     />
                   </div>
                 </div>

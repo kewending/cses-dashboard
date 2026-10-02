@@ -1,221 +1,40 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect } from "react";
 import { Play, Pause, SkipForward, ArrowLeft, Loader2, ListMusic, Volume2 } from "lucide-react";
 import Link from "next/link";
-import { useSettings } from "@/lib/SettingsContext";
+import { useBrainSoaking } from "@/lib/BrainSoakingContext";
 
-export default function SoakingClient({ playlist }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const isPlayingRef = useRef(false);
-  const { settings, isLoaded } = useSettings();
-  
-  // Track data cache: { [index]: { sentence: str, wordAudio: base64, explanationAudio: base64, sentenceAudio: base64, error: boolean } }
-  const [cache, setCache] = useState({});
-  
-  const [currentAction, setCurrentAction] = useState(""); // "word", "pause", "explanation", "sentence", "loading"
-  const audioRef = useRef(null);
-  
-  // Ref to hold the current timeouts to allow cancelling on skip/pause
-  const timerRefs = useRef([]);
-  const activeProcessRef = useRef(false);
+export default function SoakingClient() {
+  const { 
+    playlist, 
+    isPlaying, 
+    currentIndex, 
+    cache, 
+    currentAction,
+    handlePlayPause, 
+    handleSkip, 
+    initializePlaylist 
+  } = useBrainSoaking();
 
-  const clearAllTimers = () => {
-    timerRefs.current.forEach(clearTimeout);
-    timerRefs.current = [];
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-  };
-
-  const wait = (ms) => new Promise(resolve => {
-    const timer = setTimeout(resolve, ms);
-    timerRefs.current.push(timer);
-  });
-
-  const playAudioBase64 = (base64) => {
-    return new Promise((resolve, reject) => {
-      const audio = new Audio(`data:audio/wav;base64,${base64}`);
-      audioRef.current = audio;
-      audio.onended = resolve;
-      audio.onerror = reject;
-      audio.play().catch(reject);
-    });
-  };
-
-  // The main preloader function
-  const preloadTrack = async (index) => {
-    if (index >= playlist.length || cache[index]) return; // already cached or fetching
-    
-    // Mark as fetching to prevent duplicates
-    setCache(prev => ({ ...prev, [index]: { fetching: true } }));
-    
-    try {
-      const track = playlist[index];
-      
-      // 1. Fetch dynamic sentence
-      const sentenceRes = await fetch("http://localhost:8000/api/playlist/generate-sentence", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word: track.text, meaning: track.meaning })
-      });
-      const { sentence } = await sentenceRes.json();
-      
-      // 2. Fetch TTS for word
-      const wordTtsRes = await fetch("http://localhost:8000/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: track.text })
-      });
-      const wordTts = await wordTtsRes.json();
-      
-      // 2.5 Fetch TTS for explanation (if exists)
-      let explanationAudio = null;
-      if (track.explanation) {
-         const expTtsRes = await fetch("http://localhost:8000/api/tts", {
-           method: "POST",
-           headers: { "Content-Type": "application/json" },
-           body: JSON.stringify({ text: track.explanation, speed: 1.1 })
-         });
-         const expTts = await expTtsRes.json();
-         explanationAudio = expTts.audio_base64;
-      }
-      
-      // 3. Fetch TTS for sentence
-      const sentenceTtsRes = await fetch("http://localhost:8000/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: sentence })
-      });
-      const sentenceTts = await sentenceTtsRes.json();
-      
-      setCache(prev => ({
-        ...prev,
-        [index]: {
-          fetching: false,
-          sentence,
-          wordAudio: wordTts.audio_base64,
-          explanationAudio,
-          sentenceAudio: sentenceTts.audio_base64
-        }
-      }));
-    } catch (e) {
-      console.error("Failed to preload track", index, e);
-      setCache(prev => ({ ...prev, [index]: { fetching: false, error: true } }));
-    }
-  };
-
-  // Preload the next track whenever current index changes
+  // Initialize the playlist in the global context if it hasn't been already
   useEffect(() => {
-    preloadTrack(currentIndex);
-    preloadTrack(currentIndex + 1);
-  }, [currentIndex]);
-
-  useEffect(() => {
-    isPlayingRef.current = isPlaying;
-  }, [isPlaying]);
-
-  const runTrackEngine = async (index, trackData) => {
-    activeProcessRef.current = true;
-    
-    if (!isPlayingRef.current) {
-      activeProcessRef.current = false;
-      return;
+    if (playlist.length === 0) {
+      initializePlaylist();
     }
-
-    // 1. Play word
-    setCurrentAction("word");
-    try { await playAudioBase64(trackData.wordAudio); } catch (e) {}
-    
-    if (!isPlayingRef.current) { activeProcessRef.current = false; return; }
-    
-    // 2. Short pause
-    setCurrentAction("pause");
-    await wait(settings?.english?.pauseAfterWord ?? 1000);
-    
-    if (!isPlayingRef.current) { activeProcessRef.current = false; return; }
-    
-    // 2.5 Play explanation if available
-    if (trackData.explanationAudio) {
-      setCurrentAction("explanation");
-      try { await playAudioBase64(trackData.explanationAudio); } catch (e) {}
-      
-      if (!isPlayingRef.current) { activeProcessRef.current = false; return; }
-      
-      setCurrentAction("pause");
-      await wait(settings?.english?.pauseAfterWord ?? 1000);
-      
-      if (!isPlayingRef.current) { activeProcessRef.current = false; return; }
-    }
-    
-    // 3. Play sentence
-    setCurrentAction("sentence");
-    try { await playAudioBase64(trackData.sentenceAudio); } catch (e) {}
-    
-    if (!isPlayingRef.current) { activeProcessRef.current = false; return; }
-    
-    // 4. Long pause before next track
-    setCurrentAction("pause");
-    await wait(settings?.english?.pauseAfterSentence ?? 2000);
-    
-    activeProcessRef.current = false;
-    
-    if (isPlayingRef.current) {
-      // Loop infinitely
-      setCurrentIndex(prev => (prev + 1) % playlist.length);
-    }
-  };
-
-  useEffect(() => {
-    if (isPlaying && !activeProcessRef.current) {
-      const trackData = cache[currentIndex];
-      if (trackData && !trackData.fetching) {
-        if (!trackData.error) {
-          runTrackEngine(currentIndex, trackData);
-        } else {
-          // If error, just skip to next
-          setCurrentIndex(prev => (prev + 1) % playlist.length);
-        }
-      } else {
-        setCurrentAction("loading");
-      }
-    }
-  }, [isPlaying, currentIndex, cache]);
-
-  // Hook into MediaSession API for lockscreen controls
-  useEffect(() => {
-    if ('mediaSession' in navigator) {
-      const currentTrack = playlist[currentIndex];
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: currentTrack?.text || "Brain Soaking",
-        artist: "CSES AI",
-        album: "English Playlist"
-      });
-      
-      navigator.mediaSession.setActionHandler('play', () => setIsPlaying(true));
-      navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
-      navigator.mediaSession.setActionHandler('nexttrack', () => handleSkip());
-    }
-  }, [currentIndex, playlist]);
-
-  const handlePlayPause = () => {
-    if (isPlaying) {
-      setIsPlaying(false);
-      clearAllTimers();
-    } else {
-      setIsPlaying(true);
-    }
-  };
-
-  const handleSkip = () => {
-    clearAllTimers();
-    activeProcessRef.current = false;
-    setCurrentIndex((currentIndex + 1) % playlist.length);
-  };
+  }, [playlist.length, initializePlaylist]);
 
   const currentTrack = playlist[currentIndex];
-  const trackData = cache[currentIndex];
+  const trackData = cache[currentTrack?.id];
+
+  if (playlist.length === 0) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center">
+        <Loader2 className="w-10 h-10 text-indigo-400 animate-spin mb-4" />
+        <p className="text-neutral-500 uppercase tracking-widest">Initializing Soaking Engine...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center relative overflow-hidden">
@@ -251,15 +70,17 @@ export default function SoakingClient({ playlist }) {
               </div>
             ) : (
               <>
-                <h1 className="text-5xl font-black tracking-tight mb-2 truncate w-full px-4">{currentTrack?.text}</h1>
+                <h1 className="text-5xl font-black tracking-tight mb-2 truncate w-full px-4">
+                  {currentAction === 'spelling' ? currentTrack?.text.split('').join(' - ') : currentTrack?.text}
+                </h1>
                 <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-6">
                   {trackData?.sentence ? "AI Generated Example" : currentTrack?.meaning}
                 </p>
                 
                 {trackData?.sentence && (
-                  <div className={`mt-4 space-y-4 max-w-sm transition-opacity duration-500 ${currentAction === 'explanation' || currentAction === 'sentence' ? 'opacity-100' : 'opacity-40'}`}>
+                  <div className={`mt-4 space-y-4 max-w-sm transition-opacity duration-500 ${currentAction === 'meaning' || currentAction === 'sentence' ? 'opacity-100' : 'opacity-40'}`}>
                     {currentTrack?.explanation && (
-                      <p className={`text-md text-indigo-200 transition-opacity duration-300 ${currentAction === 'explanation' ? 'opacity-100' : 'opacity-50'}`}>
+                      <p className={`text-md text-indigo-200 transition-opacity duration-300 ${currentAction === 'meaning' ? 'opacity-100' : 'opacity-50'}`}>
                         {currentTrack.explanation}
                       </p>
                     )}

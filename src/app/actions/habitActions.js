@@ -7,7 +7,7 @@ export async function getHabits() {
   try {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const dateLimit = thirtyDaysAgo.toISOString().split('T')[0];
+    const dateLimit = `${thirtyDaysAgo.getFullYear()}-${(thirtyDaysAgo.getMonth() + 1).toString().padStart(2, '0')}-${thirtyDaysAgo.getDate().toString().padStart(2, '0')}`;
 
     const habits = await prisma.habit.findMany({
       include: {
@@ -61,8 +61,9 @@ export async function deleteHabit(id) {
 
 export async function logHabit(habitId, type) { // type: 'positive' | 'negative'
   try {
-    const today = new Date().toISOString().split('T')[0];
-    
+    const d = new Date();
+    const today = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+
     const habit = await prisma.habit.findUnique({ where: { id: habitId } });
     if (!habit) throw new Error('Habit not found');
 
@@ -84,7 +85,7 @@ export async function logHabit(habitId, type) { // type: 'positive' | 'negative'
 
     // Determine Log-Odds value
     let baseValue = 0;
-    switch(habit.difficulty) {
+    switch (habit.difficulty) {
       case 'Trivial': baseValue = 0.1; break;
       case 'Easy': baseValue = 0.25; break;
       case 'Medium': baseValue = 0.5; break;
@@ -94,11 +95,10 @@ export async function logHabit(habitId, type) { // type: 'positive' | 'negative'
     }
 
     let logOddsValue = type === 'positive' ? baseValue : -(baseValue * 2);
-    let descPrefix = type === 'positive' ? 'Habit:' : 'Habit failure:';
 
     await castVote({
       logOddsValue,
-      description: `${descPrefix} ${habit.title}`
+      description: `${habit.title}`
     });
 
     return { success: true, log };

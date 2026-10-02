@@ -22,7 +22,8 @@ export async function getIdentityData() {
     // Ensure LogOddsState exists
     let logOddsState = await prisma.logOddsState.findFirst();
     if (!logOddsState) {
-      const today = new Date().toISOString().split('T')[0];
+      const d = new Date();
+      const today = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
       logOddsState = await prisma.logOddsState.create({
         data: {
           currentLogOdds: -4.5,
@@ -33,7 +34,8 @@ export async function getIdentityData() {
     }
 
     // Run Daily Decay Check automatically on fetch
-    const today = new Date().toISOString().split('T')[0];
+    const d2 = new Date();
+    const today = `${d2.getFullYear()}-${(d2.getMonth() + 1).toString().padStart(2, '0')}-${d2.getDate().toString().padStart(2, '0')}`;
     if (logOddsState.lastDecayDate && logOddsState.lastDecayDate !== today) {
       const lastDate = new Date(logOddsState.lastDecayDate);
       const currentDate = new Date(today);
@@ -115,7 +117,8 @@ export async function updateDifficulty(difficultyBeta0) {
 
 export async function castVote({ logOddsValue, description, taskId, dailyLogId, interactionId }) {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const today = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
     
     // 1. Create the vote
     const vote = await prisma.identityVote.create({

@@ -476,6 +476,8 @@ model VocabItem {
   tags             String?          // JSON array: ["Rescue Phrase", "High-frequency"]
   
   progress         LearningProgress?
+  
+  lastSoakedAt     DateTime?        // Tracks when this word was last listened to in Brain Soaking
 
   // Many-to-many with Scenarios
   scenarios        Scenario[]       @relation("ScenarioVocab")

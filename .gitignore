@@ -60,3 +60,6 @@ dev.db
 
 # Data
 /src/data/
+
+# Python
+__pycache__/

@@ -44,7 +44,7 @@ const STATUS_LABELS = {
   COMPLETED: 'Completed'
 };
 
-function SortableProjectCard({ project, allProjects, allTasks, onDelete, onOpenDetail }) {
+function SortableProjectCard({ project, allProjects, allTasks, objectives, onDelete, onOpenDetail }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
     data: { type: 'Project', project }
@@ -60,6 +60,7 @@ function SortableProjectCard({ project, allProjects, allTasks, onDelete, onOpenD
   const liveSubprojects = allProjects.filter(p => p.parentProjectId === project.id);
   const liveTasks = allTasks?.filter(t => t.projectId === project.id) || [];
   const isParent = liveSubprojects.length > 0;
+  const isSub = !!project.parentProjectId;
   
   let completedCount = 0;
   let totalCount = 0;
@@ -74,6 +75,7 @@ function SortableProjectCard({ project, allProjects, allTasks, onDelete, onOpenD
   
   const progress = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
   const progressLabel = isParent ? 'Projects Done' : 'Tasks Done';
+  const obj = project.objective || objectives?.find(o => o.id === project.objectiveId);
 
   return (
     <div
@@ -81,13 +83,24 @@ function SortableProjectCard({ project, allProjects, allTasks, onDelete, onOpenD
       style={style}
       className={`bg-[var(--color-bg-panel)] border border-[var(--color-border)] p-4 rounded-xl flex flex-col gap-3 hover:border-[var(--color-border-hover)] transition-colors mb-3 relative group`}
     >
-      {project.objective && (
+      {obj && (
         <div className="absolute -top-2 left-2 z-10 bg-[var(--color-bg-panel)] text-[10px] px-2 py-0.5 rounded-md border border-[var(--color-border)] text-[var(--color-text-muted)] shadow-sm">
-          🎯 {project.objective.title}
+          🎯 {obj.title}
         </div>
       )}
-      <div className="flex justify-between items-start gap-2 relative">
-        <div className="flex-1 flex items-start cursor-grab active:cursor-grabbing mr-2 pb-1" {...attributes} {...listeners} onClick={() => onOpenDetail(project.id)}>
+      <div className="flex justify-between items-start gap-2 relative mt-0.5">
+        <div className="flex-1 flex flex-col items-start cursor-grab active:cursor-grabbing mr-2 pb-1" {...attributes} {...listeners} onClick={() => onOpenDetail(project.id)}>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            {isSub ? (
+              <span className="text-[10px] font-semibold text-[var(--color-text-muted)] bg-[var(--color-bg-dark)] border border-[var(--color-border)] px-1.5 py-0.5 rounded flex items-center gap-1">
+                <span>↳</span> Subproject
+              </span>
+            ) : (
+              <span className="text-[10px] font-semibold text-amber-500 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded flex items-center gap-1">
+                <span>📁</span> Parent Project
+              </span>
+            )}
+          </div>
           <h4 className="text-[var(--color-text-main)] font-medium text-[15px] leading-tight">{project.title}</h4>
         </div>
         <button 
@@ -133,7 +146,7 @@ function ObjectiveCard({ objective, projects, onDelete, onOpenDetail }) {
   );
 }
 
-function SortableColumn({ status, title, projects, allProjects, allTasks, addUI, onDeleteProject, onOpenDetail }) {
+function SortableColumn({ status, title, projects, allProjects, allTasks, objectives, addUI, onDeleteProject, onOpenDetail }) {
   const { setNodeRef } = useSortable({
     id: status,
     data: { type: 'Status', status }
@@ -160,7 +173,7 @@ function SortableColumn({ status, title, projects, allProjects, allTasks, addUI,
       >
         <SortableContext items={projects.map(p => p.id)} strategy={verticalListSortingStrategy}>
           {projects.map(p => (
-            <SortableProjectCard key={p.id} project={p} allProjects={allProjects} allTasks={allTasks} onDelete={onDeleteProject} onOpenDetail={onOpenDetail} />
+            <SortableProjectCard key={p.id} project={p} allProjects={allProjects} allTasks={allTasks} objectives={objectives} onDelete={onDeleteProject} onOpenDetail={onOpenDetail} />
           ))}
         </SortableContext>
       </div>
@@ -172,7 +185,7 @@ export default function ProjectsView({
   projects, allProjects, objectives, tasks = [], setTasks, setProjects, setObjectives, 
   createProject, updateProject, deleteProject, 
   createObjective, updateObjective, deleteObjective, 
-  reorderProjects, objectiveFilter, onAddTaskClick,
+  reorderProjects, objectiveFilter, parentProjectFilter = 'all', setParentProjectFilter, onAddTaskClick,
   onOpenTask, toggleTaskComplete, deleteTask,
   detailProjectId, setDetailProjectId,
   detailObjectiveId, setDetailObjectiveId
@@ -180,6 +193,11 @@ export default function ProjectsView({
   const [newObjectiveTitle, setNewObjectiveTitle] = useState('');
   
   const [isFocusMode, setIsFocusMode] = useState(false);
+
+  const focusedParent = parentProjectFilter !== 'all' ? allProjects.find(p => p.id === parentProjectFilter) : null;
+  const focusedSubs = focusedParent ? allProjects.filter(p => p.parentProjectId === focusedParent.id) : [];
+  const completedSubs = focusedSubs.filter(p => p.status === 'COMPLETED').length;
+  const focusProgress = focusedSubs.length > 0 ? Math.round((completedSubs / focusedSubs.length) * 100) : 0;
 
   const handleDeleteObjective = (id) => {
     setObjectives(prev => prev.filter(o => o.id !== id));
@@ -260,7 +278,20 @@ export default function ProjectsView({
 
       const reordered = updated.map((p, i) => ({ ...p, order: i }));
       
-      setProjects(reordered);
+      // Update master state safely without losing non-filtered projects
+      setProjects(prev => {
+        const orderMap = new Map(reordered.map(p => [p.id, p.order]));
+        return prev.map(p => {
+          let updatedItem = p;
+          if (p.id === activeProject.id && needsStatusUpdate) {
+            updatedItem = { ...updatedItem, status: targetStatus };
+          }
+          if (orderMap.has(p.id)) {
+            updatedItem = { ...updatedItem, order: orderMap.get(p.id) };
+          }
+          return updatedItem;
+        });
+      });
 
       if (needsStatusUpdate) {
         updateProject(activeProject.id, { status: targetStatus });
@@ -271,14 +302,13 @@ export default function ProjectsView({
     }
   };
 
-  
-  
   return (
     <>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex-1 flex gap-4 overflow-hidden h-full">
 
-          <div className="flex-1 min-w-[220px] bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-2xl flex flex-col overflow-hidden p-2">
+          {/* Objectives Column */}
+          <div className="flex-1 min-w-[220px] max-w-[280px] bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-2xl flex flex-col overflow-hidden p-2">
             <div className="px-3 py-3 flex items-center justify-between font-semibold text-[var(--color-text-main)]">
               <div className="text-[15px] flex items-center gap-2">🎯 Objectives</div>
             </div>
@@ -335,43 +365,74 @@ export default function ProjectsView({
             </div>
           </div>
 
-          {STATUSES.map(status => {
-            const columnProjects = projects.filter(p => p.status === status).sort((a,b) => (a.order || 0) - (b.order || 0));
-            return (
-              <SortableColumn
-                key={status}
-                status={status}
-                title={STATUS_LABELS[status]}
-                projects={columnProjects}
-                allProjects={projects}
-                allTasks={tasks}
-                onDeleteProject={handleDeleteProject}
-                onOpenDetail={setDetailProjectId}
-                addUI={
-                  status === 'BACKLOG' ? (
-                    <button
-                      onClick={() => {
-                        const actualObjectiveId = (objectiveFilter === 'all' || objectiveFilter === 'unassigned') ? null : objectiveFilter;
-                        setProjectCreatorConfig({ status: 'BACKLOG', objectiveId: actualObjectiveId });
-                        setShowProjectCreator(true);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg border border-transparent hover:bg-[var(--color-bg-panel)] text-[13px] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]/80 transition-colors flex items-center gap-2 mb-2"
-                    >
-                      <span className="text-lg leading-none">+</span> Add Project
-                    </button>
-                  ) : null
-                }
-              />
-            );
-          })}
+          {/* Kanban Columns Container with optional Focus Mode Banner */}
+          <div className="flex-[4] flex flex-col gap-3 overflow-hidden h-full min-w-0">
+            {focusedParent && (
+              <div className="bg-[var(--color-bg-panel)] border border-[var(--color-border)] rounded-2xl px-4 py-2.5 flex items-center justify-between flex-shrink-0 shadow-sm animate-in fade-in duration-200">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-base text-amber-500">📁</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-bold">Focus Mode:</span>
+                    <span className="text-sm font-bold text-[var(--color-text-main)] truncate">{focusedParent.title}</span>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[var(--color-bg-dark)] border border-[var(--color-border)] text-[var(--color-text-muted)] ml-1 flex-shrink-0">
+                      {completedSubs} / {focusedSubs.length} subprojects ({focusProgress}%)
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setParentProjectFilter && setParentProjectFilter('all')}
+                  className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-bg-panel-hover)] px-2.5 py-1 rounded-lg border border-[var(--color-border)] transition-colors flex items-center gap-1.5 flex-shrink-0 font-medium"
+                >
+                  <span>✕</span> Exit Focus
+                </button>
+              </div>
+            )}
+
+            <div className="flex-1 flex gap-4 overflow-hidden h-full min-h-0">
+              {STATUSES.map(status => {
+                const columnProjects = projects.filter(p => p.status === status).sort((a,b) => (a.order || 0) - (b.order || 0));
+                return (
+                  <SortableColumn
+                    key={status}
+                    status={status}
+                    title={STATUS_LABELS[status]}
+                    projects={columnProjects}
+                    allProjects={allProjects}
+                    allTasks={tasks}
+                    objectives={objectives}
+                    onDeleteProject={handleDeleteProject}
+                    onOpenDetail={setDetailProjectId}
+                    addUI={
+                      status === 'BACKLOG' ? (
+                        <button
+                          onClick={() => {
+                            const actualObjectiveId = (objectiveFilter === 'all' || objectiveFilter === 'unassigned') 
+                              ? (focusedParent?.objectiveId || null) 
+                              : objectiveFilter;
+                            setProjectCreatorConfig({ 
+                              status: 'BACKLOG', 
+                              objectiveId: actualObjectiveId,
+                              parentProjectId: focusedParent ? focusedParent.id : null,
+                            });
+                            setShowProjectCreator(true);
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-lg border border-transparent hover:bg-[var(--color-bg-panel)] text-[13px] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]/80 transition-colors flex items-center gap-2 mb-2"
+                        >
+                          <span className="text-lg leading-none">+</span> {focusedParent ? 'Add Subproject' : 'Add Project'}
+                        </button>
+                      ) : null
+                    }
+                  />
+                );
+              })}
+            </div>
+          </div>
 
         </div>
         <DragOverlay dropAnimation={defaultDropAnimationSideEffects({ sideEffects: ['opacity'] })}>
-          {activeProject ? <SortableProjectCard project={activeProject} allProjects={projects} allTasks={tasks} onOpenDetail={() => {}} onDelete={() => {}} /> : null}
+          {activeProject ? <SortableProjectCard project={activeProject} allProjects={allProjects} allTasks={tasks} objectives={objectives} onOpenDetail={() => {}} onDelete={() => {}} /> : null}
         </DragOverlay>
       </DndContext>
-
-
 
       {/* PROJECT CREATOR MODAL */}
       {showProjectCreator && (

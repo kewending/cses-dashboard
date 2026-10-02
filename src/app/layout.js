@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { SettingsProvider } from "../lib/SettingsContext";
 import QuickCaptureModal from "../components/QuickCapture/QuickCaptureModal";
 import AgentChat from "../components/AgentChat";
+import BrainSoakingWidget from "../components/BrainSoakingWidget";
+import { BrainSoakingProvider } from "../lib/BrainSoakingContext";
 import "./globals.css";
 
 export const metadata = {
@@ -47,21 +49,26 @@ export default async function RootLayout({ children }) {
       </head>
       <body className="flex h-screen overflow-hidden">
         <SettingsProvider>
-          {/* Responsive, Stateful Global Sidebar */}
-          <Sidebar defaultCollapsed={defaultCollapsed} />
+          <BrainSoakingProvider>
+            {/* Responsive, Stateful Global Sidebar */}
+            <Sidebar defaultCollapsed={defaultCollapsed} />
 
-          {/* Main Content Area */}
-          <main className="flex-1 h-full overflow-y-auto relative bg-[var(--color-bg-dark)]">
-            <div className="p-8 pt-12">
-              {children}
-            </div>
-          </main>
-          
-          {/* Global Quick Capture (Cmd+K) */}
-          <QuickCaptureModal />
-          
-          {/* Floating Agent Chat */}
-          <AgentChat />
+            {/* Main Content Area */}
+            <main className="flex-1 h-full overflow-y-auto relative bg-[var(--color-bg-dark)]">
+              <div className="p-8 pt-12">
+                {children}
+              </div>
+            </main>
+            
+            {/* Global Quick Capture (Cmd+K) */}
+            <QuickCaptureModal />
+            
+            {/* Floating Agent Chat */}
+            <AgentChat />
+            
+            {/* Brain Soaking Floating Player */}
+            <BrainSoakingWidget />
+          </BrainSoakingProvider>
         </SettingsProvider>
       </body>
     </html>

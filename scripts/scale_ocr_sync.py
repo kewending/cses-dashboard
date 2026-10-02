@@ -1,8 +1,8 @@
 """
 CSES Scale OCR Sync Script
-Downloads the latest image from 'Personal Data' Google Drive folder,
+Downloads images from 'Personal Data' Google Drive folder,
 extracts data (Weight, BMI/Fat, BMR, Bone Mass) via Tesseract OCR,
-deduces measurement date from INSIDE the image, checks for duplicates, 
+deduces measurement date from INSIDE the image, checks for duplicates against DB and JSON,
 and updates physical_data.json & Daily Log.
 """
 
@@ -11,11 +11,9 @@ import io
 import sys
 import json
 import re
+import sqlite3
 from datetime import datetime
 import traceback
-from PIL import Image
-import pytesseract
-
 
 def ensure_dependencies():
     packages = {
@@ -40,12 +38,10 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-import io
 import pytesseract
 from PIL import Image
 
 # --- Configuration ---
-# Specify the Google Drive folder names where your scale screenshots are uploaded.
 DRIVE_PARENT_FOLDER = 'Personal Data'
 DRIVE_SUBFOLDER = 'Weight'
 
@@ -68,10 +64,15 @@ if not tesseract_found:
     print(f"[ERROR] Tesseract-OCR 未找到。")
     sys.exit(1)
 
+# Ensure TESSDATA_PREFIX is set
+local_tessdata = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tessdata')
+if os.path.exists(local_tessdata) and not os.environ.get('TESSDATA_PREFIX'):
+    os.environ['TESSDATA_PREFIX'] = local_tessdata
+
 def authenticate_drive():
     creds = None
-    token_path = os.path.join(os.path.dirname(__file__), 'drive_token.json')
-    creds_path = os.path.join(os.path.dirname(__file__), 'credentials.json')
+    token_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'drive_token.json')
+    creds_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'credentials.json')
 
     if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
@@ -88,65 +89,35 @@ def authenticate_drive():
             token.write(creds.to_json())
     return build('drive', 'v3', credentials=creds)
 
-def download_latest_image(service):
-    # 1. Find the parent folder
+def get_existing_scale_dates():
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'prisma', 'dev.db')
+    if not os.path.exists(db_path):
+        return set()
+    try:
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute("SELECT date FROM PhysicalData")
+        dates = {r[0] for r in cur.fetchall() if r[0]}
+        conn.close()
+        return dates
+    except Exception as e:
+        print(f"[WARNING] Could not read PhysicalData dates from DB: {e}")
+        return set()
+
+def get_weight_folder_id(service):
     folder_results = service.files().list(
         q=f"name = '{DRIVE_PARENT_FOLDER}' and mimeType = 'application/vnd.google-apps.folder'",
         spaces='drive',
         fields="files(id, name)"
     ).execute()
+    parent_id = folder_results['files'][0]['id'] if folder_results.get('files') else None
     
-    query = "mimeType contains 'image/'"
-    if folder_results.get('files'):
-        parent_id = folder_results['files'][0]['id']
-        print(f"[DRIVE] Found '{DRIVE_PARENT_FOLDER}' folder.")
+    query = f"name = '{DRIVE_SUBFOLDER}' and mimeType = 'application/vnd.google-apps.folder'"
+    if parent_id:
+        query += f" and '{parent_id}' in parents"
         
-        subfolder_results = service.files().list(
-            q=f"'{parent_id}' in parents and name = '{DRIVE_SUBFOLDER}' and mimeType = 'application/vnd.google-apps.folder'",
-            spaces='drive',
-            fields="files(id, name)"
-        ).execute()
-        
-        if subfolder_results.get('files'):
-            folder_id = subfolder_results['files'][0]['id']
-            query = f"'{folder_id}' in parents and mimeType contains 'image/'"
-            print(f"[DRIVE] Found '{DRIVE_SUBFOLDER}' subfolder.")
-        else:
-            query = f"'{parent_id}' in parents and mimeType contains 'image/'"
-            print(f"[WARNING] '{DRIVE_SUBFOLDER}' subfolder not found. Searching '{DRIVE_PARENT_FOLDER}' folder.")
-    else:
-        print(f"[WARNING] '{DRIVE_PARENT_FOLDER}' folder not found. Searching all images globally.")
-
-    # 2. Get latest image in that folder
-    results = service.files().list(
-        q=query,
-        orderBy="createdTime desc",
-        pageSize=1,
-        fields="files(id, name, createdTime)"
-    ).execute()
-    
-    items = results.get('files', [])
-    if not items:
-        print("[INFO] No images found.")
-        return None, None
-        
-    latest_file = items[0]
-    filename = latest_file['name']
-    print(f"[DRIVE] Found latest image: {filename} ({latest_file['createdTime']})")
-    
-    request = service.files().get_media(fileId=latest_file['id'])
-    fh = io.BytesIO()
-    downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while done is False:
-        status, done = downloader.next_chunk()
-    
-    fh.seek(0)
-    image_path = os.path.join(os.path.dirname(__file__), 'latest_scale.jpg')
-    with open(image_path, 'wb') as f:
-        f.write(fh.read())
-        
-    return image_path, filename
+    sub_results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+    return sub_results['files'][0]['id'] if sub_results.get('files') else None
 
 def extract_data_from_image(image_path):
     print(f"[OCR] Running Tesseract OCR on {image_path}...")
@@ -159,7 +130,6 @@ def extract_data_from_image(image_path):
     
     data = {}
     
-    # 1. Precise English label extraction
     patterns = {
         'weight_kg': r'(?i)Weight\s+(\d{2,3}\.\d+)kg',
         'bmi': r'(?i)BMI\s+(\d{1,2}\.\d+)',
@@ -186,71 +156,73 @@ def extract_data_from_image(image_path):
         if match:
             data[key] = float(match.group(1))
 
-    # 2. Fallbacks (in case labels are missing or in Chinese)
+    # Fallbacks
     if 'weight_kg' not in data:
         kg_matches = re.findall(r'(\d{1,3}\.\d+)\s*kg', text)
         for match in kg_matches:
             val = float(match)
-            # Only pick typical weights, avoid bone mass (<10) or ideal weight
             if 30 < val < 150:
                 data['weight_kg'] = val
             elif val < 10 and 'bone_mass_kg' not in data:
                 data['bone_mass_kg'] = val
-                
-    if 'bmi' not in data:
-        combo_matches = re.search(r'(\d{2,3}\.\d+)\s*kg\s*(\d{1,2}\.\d+)', text)
-        if combo_matches:
-            data['bmi'] = float(combo_matches.group(2))
-            
+
     print(f"[OCR] Extracted Data: {data}")
-    print(f"[OCR] Raw Text:\n{raw_text}\n{'='*40}")
     return data, raw_text
 
-def parse_date_from_filename(filename):
-    # Match Unix timestamp in milliseconds (e.g. 1789732638195.jpg)
-    unix_match = re.search(r'(\d{13})', filename)
-    if unix_match:
-        ts = int(unix_match.group(1)) / 1000.0
-        dt = datetime.fromtimestamp(ts)
-        return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M:%S")
-
-    # Match old format Fitdays_YYYYMMDD-HHMMSS
-    match = re.search(r'(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})', filename)
-    if match:
-        date_str = f"{match.group(1)}-{match.group(2)}-{match.group(3)}"
-        time_str = f"{match.group(4)}:{match.group(5)}:{match.group(6)}"
-        return date_str, time_str
-    
-    return datetime.now().strftime("%Y-%m-%d"), datetime.now().strftime("%H:%M:%S")
-
-def parse_date_from_text(text, filename):
-    # Try format: 23:47 Sep.8,2026
-    match2 = re.search(r'(\d{2}:\d{2})\s+([A-Za-z]{3})\.(\d{1,2}),(\d{4})', text, re.IGNORECASE)
-    if match2:
+def parse_date_from_text(text, filename=None):
+    if not text:
+        return None, None
+        
+    # Match time + month name format: "21:30 Sep.20,2026" or "21:30 Sep 20, 2026" or "21:30 Sep.8,2026"
+    match_time_month = re.search(r'(\d{1,2}:\d{2})\s+([A-Za-z]{3,9})\.?\s*(\d{1,2}),?\s*(\d{4})', text, re.IGNORECASE)
+    if match_time_month:
         try:
-            time_part = match2.group(1)
-            month_str = match2.group(2)[:3].capitalize()
-            day_str = match2.group(3)
-            year_str = match2.group(4)
-            parsed_date = datetime.strptime(f"{month_str}.{day_str},{year_str}", "%b.%d,%Y")
+            time_part = match_time_month.group(1)
+            if len(time_part.split(':')[0]) == 1:
+                time_part = f"0{time_part}"
+            m_str = match_time_month.group(2)[:3].capitalize()
+            d_str = match_time_month.group(3)
+            y_str = match_time_month.group(4)
+            parsed_date = datetime.strptime(f"{m_str} {d_str} {y_str}", "%b %d %Y")
             return parsed_date.strftime("%Y-%m-%d"), f"{time_part}:00"
-        except Exception as e:
+        except Exception:
             pass
 
-    # Try format: 23:47 2026/09/08
-    match1 = re.search(r'(\d{2}:\d{2})\s+(\d{4}[/-]\d{1,2}[/-]\d{1,2})', text)
-    if match1:
-        time_str = match1.group(1) + ":00"
-        date_str = match1.group(2).replace('/', '-')
-        return date_str, time_str
+    # Match month name without time: e.g. "Sep.20,2026"
+    match_month = re.search(r'([A-Za-z]{3,9})\.?\s*(\d{1,2}),?\s*(\d{4})', text, re.IGNORECASE)
+    if match_month:
+        try:
+            m_str = match_month.group(1)[:3].capitalize()
+            d_str = match_month.group(2)
+            y_str = match_month.group(3)
+            parsed_date = datetime.strptime(f"{m_str} {d_str} {y_str}", "%b %d %Y")
+            return parsed_date.strftime("%Y-%m-%d"), "00:00:00"
+        except Exception:
+            pass
 
-    print(f"[WARNING] Could not parse measurement date from OCR text. Falling back to filename.")
-    return parse_date_from_filename(filename)
+    # Match time + YYYY/MM/DD or YYYY-MM-DD
+    match_time_iso = re.search(r'(\d{1,2}:\d{2})\s+(20\d{2}[/-]\d{1,2}[/-]\d{1,2})', text)
+    if match_time_iso:
+        time_part = match_time_iso.group(1)
+        if len(time_part.split(':')[0]) == 1:
+            time_part = f"0{time_part}"
+        parts = [int(p) for p in re.split(r'[-/]', match_time_iso.group(2))]
+        return f"{parts[0]:04d}-{parts[1]:02d}-{parts[2]:02d}", f"{time_part}:00"
+
+    # Match YYYY/MM/DD or YYYY-MM-DD alone
+    match_iso = re.search(r'(20\d{2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})', text)
+    if match_iso:
+        y, m, d = int(match_iso.group(1)), int(match_iso.group(2)), int(match_iso.group(3))
+        if 2000 <= y <= 2099 and 1 <= m <= 12 and 1 <= d <= 31:
+            return f"{y:04d}-{m:02d}-{d:02d}", "00:00:00"
+
+    print(f"[WARNING] Could not parse measurement date from Picture OCR text. Ignoring upload timestamp.")
+    return None, None
 
 def save_to_physical_data_json(date_str, time_str, data):
     if not data:
         return False
-    output_dir = os.path.dirname(__file__)
+    output_dir = os.path.dirname(os.path.abspath(__file__))
     json_path = os.path.join(output_dir, 'physical_data.json')
     
     db = {"records": []}
@@ -258,22 +230,32 @@ def save_to_physical_data_json(date_str, time_str, data):
         with open(json_path, 'r', encoding='utf-8') as f:
             try:
                 db = json.load(f)
-            except json.JSONDecodeError:
+            except Exception:
                 pass
                 
     timestamp = f"{date_str}T{time_str}"
-    
     record = {
         "date": date_str,
         "time": time_str,
         "data": data,
         "timestamp": timestamp
     }
-    db["records"].append(record)
+    
+    found = False
+    for i, r in enumerate(db.get("records", [])):
+        if r.get("date") == date_str or r.get("timestamp") == timestamp:
+            db["records"][i] = record
+            found = True
+            break
+            
+    if not found:
+        db.setdefault("records", []).append(record)
+    
+    db["records"].sort(key=lambda r: r.get("date", ""))
     
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(db, f, indent=4)
-    print(f"[SUCCESS] Appended raw data to physical_data.json")
+    print(f"[SUCCESS] Saved scale data for {date_str} to physical_data.json")
     return True
 
 def update_daily_log(date_str, data):
@@ -281,14 +263,14 @@ def update_daily_log(date_str, data):
         return
         
     weight = data['weight_kg']
-    log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'LOGS', date_str[:7])
+    log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'LOGS', date_str[:7])
     log_path = os.path.join(log_dir, f"{date_str}.md")
     
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
         
     if not os.path.exists(log_path):
-        template_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'LOGS', 'templates', 'daily_log_template.md')
+        template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'LOGS', 'templates', 'daily_log_template.md')
         if os.path.exists(template_path):
             with open(template_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -297,7 +279,6 @@ def update_daily_log(date_str, data):
                 f.write(content)
             print(f"[INFO] Created new daily log for {date_str}.")
         else:
-            print(f"[ERROR] Daily log {log_path} does not exist and template not found.")
             return
             
     with open(log_path, 'r', encoding='utf-8') as f:
@@ -309,39 +290,72 @@ def update_daily_log(date_str, data):
         with open(log_path, 'w', encoding='utf-8') as f:
             f.write(new_content)
         print(f"[SUCCESS] Updated {date_str}.md with weight: {weight} kg")
-    else:
-        print(f"[INFO] Weight already updated or not found in {date_str}.md.")
 
 def main():
     service = authenticate_drive()
-    image_path, filename = download_latest_image(service)
+    folder_id = get_weight_folder_id(service)
     
-    if not image_path or not filename:
+    query = "mimeType contains 'image/'"
+    if folder_id:
+        query += f" and '{folder_id}' in parents"
+        
+    results = service.files().list(
+        q=query,
+        orderBy="createdTime desc",
+        pageSize=20,
+        fields="files(id, name, createdTime)"
+    ).execute()
+    
+    items = results.get('files', [])
+    if not items:
+        print("[INFO] No scale images found.")
         return
 
-    # Must run OCR first to extract the ACTUAL measurement date from inside the image
-    data, raw_text = extract_data_from_image(image_path)
-    date_str, time_str = parse_date_from_text(raw_text, filename)
-    timestamp = f"{date_str}T{time_str}"
-    
-    print(f"[INFO] Measurement timestamp parsed as: {timestamp}")
-    
-    # Check for duplicates AFTER OCR (because we need the real time from OCR text)
-    json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'PROTOCOLS', 'physical_data.json')
+    db_dates = get_existing_scale_dates()
+    print(f"[DB] Found {len(db_dates)} existing PhysicalData dates in DB: {sorted(db_dates)}")
+
+    json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'physical_data.json')
+    json_dates = set()
     if os.path.exists(json_path):
-        with open(json_path, 'r', encoding='utf-8') as f:
-            try:
-                db = json.load(f)
-                for r in db.get("records", []):
-                    if r.get("timestamp") == timestamp:
-                        print(f"[INFO] Image data for {timestamp} already exists in database. Skipping duplicate save.")
-                        return
-            except Exception:
-                pass
-                
-    saved = save_to_physical_data_json(date_str, time_str, data)
-    if saved:
-        update_daily_log(date_str, data)
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                content = json.load(f)
+                json_dates = {r.get('date') for r in content.get('records', []) if r.get('date')}
+        except Exception:
+            pass
+
+    for idx, item in enumerate(items):
+        filename = item['name']
+        print(f"\n[SCALE] Evaluating {filename} ({item['createdTime']})...")
+        
+        request = service.files().get_media(fileId=item['id'])
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
+        
+        fh.seek(0)
+        temp_img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"temp_{filename}")
+        with open(temp_img_path, 'wb') as f:
+            f.write(fh.read())
+            
+        try:
+            data, raw_text = extract_data_from_image(temp_img_path)
+            date_str, time_str = parse_date_from_text(raw_text, filename)
+            if not date_str:
+                print(f"[WARNING] Skipping {filename}: No valid measurement date found in picture OCR.")
+                continue
+            print(f"[INFO] Measurement date parsed from Picture OCR: {date_str} {time_str}")
+            
+            if idx == 0 or date_str not in db_dates or date_str not in json_dates:
+                save_to_physical_data_json(date_str, time_str, data)
+                update_daily_log(date_str, data)
+            else:
+                print(f"[INFO] Scale data for {date_str} already exists in DB and JSON.")
+        finally:
+            if os.path.exists(temp_img_path):
+                os.remove(temp_img_path)
 
 if __name__ == '__main__':
     main()
